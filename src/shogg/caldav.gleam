@@ -32,11 +32,10 @@ pub type Error {
   NoCalendars
 }
 
-fn encode_basic_auth(username: String, password: String) -> String {
-  let credentials = username <> ":" <> password
-  let encoded =
-    bit_array.base64_encode(bit_array.from_string(credentials), False)
-  "Basic " <> encoded
+pub fn encode_basic_auth(username: String, password: String) -> String {
+  echo username <> ":" <> password
+  echo "Basic "
+    <> bit_array.base64_encode(<<username:utf8, ":":utf8, password:utf8>>, True)
 }
 
 pub fn new_client(
@@ -63,13 +62,13 @@ pub fn new_client(
           }
 
           let path = case string.is_empty(uri.path) {
-            True -> "/"
+            True -> "/.well-known/caldav"
             False -> uri.path
           }
 
           let req =
             request.new()
-            |> request.set_method(http.Get)
+            |> request.set_method(http.Other("REPORT"))
             |> request.set_scheme(scheme)
             |> request.set_host(host)
             |> request.set_port(port)
