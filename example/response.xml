@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus
+	xmlns="DAV:"
+	xmlns:C="urn:ietf:params:xml:ns:caldav"
+	xmlns:CR="urn:ietf:params:xml:ns:carddav">
+	<response>
+		<href>/caldav/</href>
+		<propstat>
+			<prop>
+				<principal-collection-set>
+					<href>/caldav/</href>
+				</principal-collection-set>
+				<current-user-principal>
+					<href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href>
+				</current-user-principal>
+				<current-user-privilege-set>
+					<privilege>
+						<read />
+					</privilege>
+				</current-user-privilege-set>
+				<supported-report-set>
+					<supported-report>
+						<report>
+							<expand-property />
+						</report>
+					</supported-report>
+					<supported-report>
+						<report>
+							<principal-search-property-set />
+						</report>
+					</supported-report>
+					<supported-report>
+						<report>
+							<principal-property-search />
+						</report>
+					</supported-report>
+				</supported-report-set>
+				<resourcetype>
+					<collection />
+				</resourcetype>
+				<owner />
+			</prop>
+			<status>HTTP/1.1 200 OK</status>
+		</propstat>
+	</response>
+	<response>
+		<href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href>
+		<propstat>
+			<prop>
+				<principal-collection-set>
+					<href>/caldav/</href>
+				</principal-collection-set>
+				<current-user-principal>
+					<href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href>
+				</current-user-principal>
+				<current-user-privilege-set>
+					<privilege>
+						<read />
+					</privilege>
+					<privilege>
+						<all />
+					</privilege>
+					<privilege>
+						<write />
+					</privilege>
+					<privilege>
+						<write-properties />
+					</privilege>
+					<privilege>
+						<write-content />
+					</privilege>
+				</current-user-privilege-set>
+				<supported-report-set>
+					<supported-report>
+						<report>
+							<expand-property />
+						</report>
+					</supported-report>
+					<supported-report>
+						<report>
+							<principal-search-property-set />
+						</report>
+					</supported-report>
+					<supported-report>
+						<report>
+							<principal-property-search />
+						</report>
+					</supported-report>
+				</supported-report-set>
+				<resourcetype>
+					<principal />
+					<collection />
+				</resourcetype>
+				<owner>
+					<href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href>
+				</owner>
+				<C:calendar-user-address-set>
+					<href>/caldav/</href>
+				</C:calendar-user-address-set>
+				<principal-URL>
+					<href>/caldav/</href>
+				</principal-URL>
+				<CR:addressbook-home-set>
+					<href>/caldav/</href>
+				</CR:addressbook-home-set>
+				<C:calendar-home-set>
+					<href>/caldav/</href>
+				</C:calendar-home-set>
+			</prop>
+			<status>HTTP/1.1 200 OK</status>
+		</propstat>
+	</response>
+</multistatus>

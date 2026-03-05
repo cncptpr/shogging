@@ -68,9 +68,18 @@ pub fn config_with(file: String) -> Result(Nil, DotEnvError) {
     // so for those cases we need to join the rest of the line
     // and split again
     let value =
-      list.drop(splited_line, 1)
+      list.drop(splited_line, up_to: 1)
       |> string.join("=")
       |> string.trim()
+
+    // Getting rid of surrounding parantheses
+    let value = case
+      { string.starts_with(value, "\"") && string.ends_with(value, "\"") }
+      || { string.starts_with(value, "'") && string.ends_with(value, "'") }
+    {
+      True -> value |> string.drop_start(1) |> string.drop_end(1)
+      False -> value
+    }
 
     envoy.set(key, value)
   })
