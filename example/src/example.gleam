@@ -159,6 +159,83 @@ fn fetch_todos(client: Client(SendFn(e)), calendar_href: String) {
   Ok(response.body)
 }
 
+fn serialize_parsed_todo(
+  parsed: ParsedTodo,
+  href: String,
+  etag: String,
+) -> String {
+  let base =
+    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Gleam CalDAV//EN\r\nBEGIN:VTODO\r\n"
+  let base = base <> "UID:" <> parsed.uid <> "\r\n"
+  let base = base <> "DTSTAMP:" <> parsed.dtstamp <> "\r\n"
+  let base = case parsed.created {
+    Some(v) -> base <> "CREATED:" <> v <> "\r\n"
+    None -> base
+  }
+  let base = case parsed.last_modified {
+    Some(v) -> base <> "LAST-MODIFIED:" <> v <> "\r\n"
+    None -> base
+  }
+  let base = case parsed.status {
+    Some(v) -> base <> "STATUS:" <> v <> "\r\n"
+    None -> base
+  }
+  let base = case parsed.summary {
+    Some(v) -> base <> "SUMMARY:" <> v <> "\r\n"
+    None -> base
+  }
+  let base = case parsed.completed {
+    Some(v) -> base <> "COMPLETED:" <> v <> "\r\n"
+    None -> base
+  }
+  let base = case parsed.percent_complete {
+    Some(v) -> base <> "PERCENT-COMPLETE:" <> int.to_string(v) <> "\r\n"
+    None -> base
+  }
+  let base = case parsed.x_apple_sort_order {
+    Some(v) -> base <> "X-APPLE-SORT-ORDER:" <> int.to_string(v) <> "\r\n"
+    None -> base
+  }
+  let other_fields =
+    parsed.other
+    |> list.filter(fn(o) {
+      o.0 != "BEGIN"
+      && o.0 != "END"
+      && o.0 != "VERSION"
+      && o.0 != "UID"
+      && o.0 != "DTSTAMP"
+    })
+  let base =
+    other_fields
+    |> list.fold(base, fn(acc, o) { acc <> o.0 <> ":" <> o.1 <> "\r\n" })
+  base <> "END:VTODO\r\nEND:VCALENDAR\r\n"
+}
+
+fn update_todo(
+  client: Client(SendFn(e)),
+  href: String,
+  etag: String,
+  ical_body: String,
+) -> Result(Nil, ShoggError(e)) {
+  let response =
+    client.request
+    |> request.set_path(href)
+    |> request.set_method(http.Put)
+    |> request.set_body(ical_body)
+    |> request.set_header("Content-Type", "text/calendar; charset=utf-8")
+    |> request.set_header("If-Match", etag)
+    |> client.send_fn()
+  use response <- result.try(response |> result.map_error(SendError))
+  io.println("Update response status: " <> int.to_string(response.status))
+  case response.status {
+    204 | 201 -> Ok(Nil)
+    status -> {
+      let _ = io.println("Update failed with status: " <> int.to_string(status))
+      panic
+    }
+  }
+}
+
 type TodoResponse {
   TodoResponse(href: String, etag: String, calendar_data: String)
 }
@@ -712,6 +789,30 @@ Lines</test>"
       }
     })
   io.println("Parsed " <> int.to_string(list.length(parsed_todos)) <> " todos")
+
+  io.println("\n=== Testing update ===")
+  case list.first(parsed_todos) {
+    Ok(first_todo) -> {
+      let todo_resp = case list.first(todo_responses) {
+        Ok(r) -> r
+        Error(Nil) -> TodoResponse("", "", "")
+      }
+      io.println("Updating todo: " <> first_todo.uid)
+      let updated_todo =
+        ParsedTodo(
+          ..first_todo,
+          summary: Some("UPDATED: " <> first_todo.summary |> option.unwrap("")),
+        )
+      let serialized =
+        serialize_parsed_todo(updated_todo, todo_resp.href, todo_resp.etag)
+      io.println("Serialized iCalendar:\n" <> serialized)
+      let assert Ok(_) =
+        update_todo(client, todo_resp.href, todo_resp.etag, serialized)
+      io.println("Update successful!")
+    }
+    Error(Nil) -> io.println("No todos to update")
+  }
+
   Nil
 }
 // TODO:
