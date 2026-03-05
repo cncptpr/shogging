@@ -236,6 +236,59 @@ fn update_todo(
   }
 }
 
+fn generate_uid(counter: Int) -> String {
+  let part1 = "shogg" <> int.to_string(counter)
+  let part2 = "0001"
+  let part3 = "0002"
+  let part4 = "0003"
+  let part5 = "000000000001"
+  part1 <> "-" <> part2 <> "-" <> part3 <> "-" <> part4 <> "-" <> part5
+}
+
+fn generate_dtstamp() -> String {
+  "20260302T161454Z"
+}
+
+fn create_todo(
+  client: Client(SendFn(e)),
+  calendar_href: String,
+  summary: String,
+  counter: Int,
+) -> Result(Nil, ShoggError(e)) {
+  let uid = generate_uid(counter)
+  let dtstamp = generate_dtstamp()
+  let href = calendar_href <> uid <> ".ics"
+  let ical_body =
+    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Shogg//EN\r\nBEGIN:VTODO\r\nUID:"
+    <> uid
+    <> "\r\nDTSTAMP:"
+    <> dtstamp
+    <> "\r\nCREATED:"
+    <> dtstamp
+    <> "\r\nSTATUS:NEEDS-ACTION\r\nSUMMARY:"
+    <> summary
+    <> "\r\nEND:VTODO\r\nEND:VCALENDAR\r\n"
+  io.println("Creating todo with href: " <> href)
+  io.println("iCalendar body:\n" <> ical_body)
+  let response =
+    client.request
+    |> request.set_path(href)
+    |> request.set_method(http.Put)
+    |> request.set_body(ical_body)
+    |> request.set_header("Content-Type", "text/calendar; charset=utf-8")
+    |> request.set_header("If-None-Match", "*")
+    |> client.send_fn()
+  use response <- result.try(response |> result.map_error(SendError))
+  io.println("Create response status: " <> int.to_string(response.status))
+  case response.status {
+    201 -> Ok(Nil)
+    status -> {
+      let _ = io.println("Create failed with status: " <> int.to_string(status))
+      panic
+    }
+  }
+}
+
 type TodoResponse {
   TodoResponse(href: String, etag: String, calendar_data: String)
 }
@@ -812,6 +865,11 @@ Lines</test>"
     }
     Error(Nil) -> io.println("No todos to update")
   }
+
+  io.println("\n=== Testing create ===")
+  let assert Ok(_) =
+    create_todo(client, calendar.href, "New test todo from Shogg!", 9999)
+  io.println("Create successful!")
 
   Nil
 }
