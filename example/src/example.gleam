@@ -15,14 +15,42 @@ import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
+import gleam/time/calendar
+import gleam/time/duration
+import gleam/time/timestamp
 import parsed_it/xml
 import shogg/caldav
 import simplifile
+import youid/uuid
 
 const xml_ct = "application/xml; charset=utf-8"
 
 fn decode_text_field(name name, cb cb) {
   decode.field(name, decode_text(), cb)
+}
+
+fn formal_cal_date(now: timestamp.Timestamp) {
+  let #(
+    calendar.Date(year, month, day),
+    calendar.TimeOfDay(hours, minutes, seconds, _),
+  ) = now |> timestamp.to_calendar(calendar.utc_offset)
+
+  let pad = fn(num, padding) {
+    string.pad_start(int.to_string(num), to: padding, with: "0")
+  }
+
+  // Formatting to always have two digits for month, day, hour, minute, second
+  let formatted_string =
+    pad(year, 4)
+    <> pad(calendar.month_to_int(month), 2)
+    <> pad(day, 2)
+    <> "T"
+    <> pad(hours, 2)
+    <> pad(minutes, 2)
+    <> pad(seconds, 2)
+    <> "Z"
+
+  formatted_string
 }
 
 fn decode_text() {
@@ -236,35 +264,22 @@ fn update_todo(
   }
 }
 
-fn generate_uid(counter: Int) -> String {
-  let part1 = "shogg" <> int.to_string(counter)
-  let part2 = "0001"
-  let part3 = "0002"
-  let part4 = "0003"
-  let part5 = "000000000001"
-  part1 <> "-" <> part2 <> "-" <> part3 <> "-" <> part4 <> "-" <> part5
-}
-
-fn generate_dtstamp() -> String {
-  "20260302T161454Z"
-}
-
 fn create_todo(
   client: Client(SendFn(e)),
   calendar_href: String,
   summary: String,
   counter: Int,
 ) -> Result(Nil, ShoggError(e)) {
-  let uid = generate_uid(counter)
-  let dtstamp = generate_dtstamp()
+  let uid = uuid.v4_string()
+  let created = timestamp.system_time() |> formal_cal_date()
   let href = calendar_href <> uid <> ".ics"
   let ical_body =
     "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Shogg//EN\r\nBEGIN:VTODO\r\nUID:"
     <> uid
     <> "\r\nDTSTAMP:"
-    <> dtstamp
+    <> created
     <> "\r\nCREATED:"
-    <> dtstamp
+    <> created
     <> "\r\nSTATUS:NEEDS-ACTION\r\nSUMMARY:"
     <> summary
     <> "\r\nEND:VTODO\r\nEND:VCALENDAR\r\n"
@@ -280,6 +295,7 @@ fn create_todo(
     |> client.send_fn()
   use response <- result.try(response |> result.map_error(SendError))
   io.println("Create response status: " <> int.to_string(response.status))
+  echo response
   case response.status {
     201 -> Ok(Nil)
     status -> {
