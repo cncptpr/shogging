@@ -64,6 +64,14 @@ fn formal_cal_date(now: timestamp.Timestamp) {
   <> "Z"
 }
 
+pub fn is_competed(vtodo) {
+  case vtodo {
+    VTodo(status: Some("COMPLETED"), ..) -> True
+    VTodo(status: None, completed: Some(_), ..) -> True
+    _ -> False
+  }
+}
+
 pub fn todos_request(
   client: Client(_, _),
   calendar: Calendar,
@@ -93,8 +101,7 @@ pub fn fetch_todos(
   client: Client(_, IO(e)),
   calendar: Calendar,
 ) -> Result(List(VTodo), ShoggError(e)) {
-  let response =
-    todos_request(client, calendar) |> echo |> client.io.send |> echo
+  let response = todos_request(client, calendar) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
   parse_todos(response)
 }

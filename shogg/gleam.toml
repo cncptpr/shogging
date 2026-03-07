@@ -15,10 +15,11 @@ version = "1.0.0"
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
 gleam_http = ">= 3.0.0 and < 5.0.0"
-# This version of parsed it is localy pathed, to not normalize whitespace,
+
+# This version of parsed_it is localy pathed, to not normalize whitespace,
 # since I need the newlines to parse ical
 # TODO: Upstream changes
-parsed_it = { path = "../parsed_it" }
+parsed_it = { path = "../../parsed_it" }
 youid = ">= 1.5.1 and < 2.0.0"
 gleam_time = ">= 1.7.0 and < 2.0.0"
 

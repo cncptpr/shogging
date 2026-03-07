@@ -31,6 +31,10 @@ pub opaque type NoUserPath {
   NoUserPath
 }
 
+pub const http = http.Http
+
+pub const https = http.Https
+
 pub fn new_client(
   scheme scheme: http.Scheme,
   host host: String,
