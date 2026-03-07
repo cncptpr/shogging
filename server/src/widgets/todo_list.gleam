@@ -1,9 +1,10 @@
 import gleam/list
-import lustre/attribute
+import lustre/attribute.{styles}
 import lustre/element/html
 import lustre/event
 import shogg/vtodo
-import todo_message
+import styles.{f, flex, vcenter}
+import todo_message.{UserClickedReload}
 import widgets/todo_card
 
 pub fn render(todos: List(vtodo.VTodo)) {
@@ -14,7 +15,17 @@ pub fn render(todos: List(vtodo.VTodo)) {
   }
 
   html.main([attribute.class("container")], [
-    html.h1([], [html.text("Todo List")]),
+    html.div([styles([flex, vcenter])], [
+      html.h1([styles([f(1)])], [html.text("Shogging List")]),
+      html.button(
+        [
+          styles([#("padding", "5px 10px")]),
+          attribute.class("outline"),
+          event.on_click(UserClickedReload),
+        ],
+        [html.text("Reload")],
+      ),
+    ]),
     html.form([event.on_submit(submitted)], [
       html.fieldset([attribute.role("group")], [
         html.input([

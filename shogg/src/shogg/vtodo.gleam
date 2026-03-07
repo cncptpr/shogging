@@ -46,7 +46,11 @@ fn decode_xml_list(element decoder) {
   ])
 }
 
-fn formal_cal_date(now: timestamp.Timestamp) {
+pub fn get_now_formatted() {
+  timestamp.system_time() |> formal_cal_date()
+}
+
+pub fn formal_cal_date(now: timestamp.Timestamp) {
   let #(dt.Date(year, month, day), dt.TimeOfDay(hours, minutes, seconds, _)) =
     now |> timestamp.to_calendar(dt.utc_offset)
 
@@ -323,6 +327,7 @@ pub fn update_todo_request(
   client: Client(_, _),
   vtodo: VTodo,
 ) -> Request(String) {
+  // TODO: update updated_last
   let body = serialize_parsed_todo(vtodo)
   client.request
   |> request.set_path(vtodo.meta.href)

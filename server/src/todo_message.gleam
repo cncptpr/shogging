@@ -9,4 +9,5 @@ pub type Msg {
   UserCheckedTodo(uid: String, checked: Bool)
   UserRenamedTodo(uid: String, summary: String)
   UserDeletedTodo(uid: String)
+  UserClickedReload
 }

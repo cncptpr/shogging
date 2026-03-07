@@ -5,7 +5,7 @@ import lustre/element/html
 import lustre/event
 import shogg/vtodo
 import styles.{f, flex, invert, vcenter, width}
-import todo_message
+import todo_message.{UserCheckedTodo}
 
 pub fn render(item: vtodo.VTodo) {
   let completed = vtodo.is_competed(item)
@@ -14,6 +14,7 @@ pub fn render(item: vtodo.VTodo) {
     html.input([
       attribute.type_("checkbox"),
       attribute.checked(completed),
+      event.on_check(UserCheckedTodo(item.uid, _)),
     ]),
     html.span([styles([f(1)])], [
       case completed {

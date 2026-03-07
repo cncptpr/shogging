@@ -1,6 +1,7 @@
 // IMPORTS ---------------------------------------------------------------------
 
 import gleam/hackney
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import lustre.{type App}
@@ -12,7 +13,8 @@ import shogg/client.{type IO}
 import shogg/vtodo.{type VTodo}
 import todo_message.{
   type Msg, ShoggFetchedCalendar, ShoggFetchedTodos, ShoggSendUpdate,
-  UserAddedTodo, UserCheckedTodo, UserDeletedTodo, UserRenamedTodo,
+  UserAddedTodo, UserCheckedTodo, UserClickedReload, UserDeletedTodo,
+  UserRenamedTodo,
 }
 import widgets/todo_list
 
@@ -69,11 +71,15 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       Model(..model, calendar: Some(calendar)),
       fetch_todos_effect(model, calendar),
     )
-    ShoggFetchedTodos(todos) -> #(
-      Model(..model, todos: Some(todos)),
-      effect.none(),
-    )
+    ShoggFetchedTodos(todos) -> {
+      io.println("Todos fetched!")
+      #(Model(..model, todos: Some(todos)), effect.none())
+    }
     ShoggSendUpdate -> {
+      let assert Some(calendar) = model.calendar
+      #(model, fetch_todos_effect(model, calendar))
+    }
+    UserClickedReload -> {
       let assert Some(calendar) = model.calendar
       #(model, fetch_todos_effect(model, calendar))
     }
@@ -83,7 +89,35 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
         vtodo.send_create_todo(model.client, calendar, summary)
       #(model, fetch_todos_effect(model, calendar))
     }
-    UserCheckedTodo(uid:, checked:) -> todo
+    UserCheckedTodo(uid:, checked:) -> {
+      let assert Model(client, _, Some(todos)) = model
+      let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
+      // TODO: use Enum for status and timestamp for time.
+      let vtodo = case checked {
+        True ->
+          vtodo.VTodo(
+            ..vtodo,
+            status: Some("COMPLETED"),
+            completed: Some(vtodo.get_now_formatted()),
+          )
+        False ->
+          vtodo.VTodo(..vtodo, status: Some("NEEDS-ACTION"), completed: None)
+      }
+      let todos =
+        list.map(todos, fn(t) {
+          case t.uid == uid {
+            True -> vtodo
+            False -> t
+          }
+        })
+      #(
+        Model(..model, todos: Some(todos)),
+        effect.from(fn(dispatch) {
+          let assert Ok(_href) = vtodo.send_update_todo(client, vtodo)
+          ShoggSendUpdate |> dispatch
+        }),
+      )
+    }
     UserRenamedTodo(uid:, summary:) -> {
       let assert Model(client, _, Some(todos)) = model
       let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
