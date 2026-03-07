@@ -1,6 +1,5 @@
 import dotenv
 import envoy
-import gleam/bool
 import gleam/hackney
 import gleam/http
 import gleam/list
@@ -25,10 +24,6 @@ pub fn main() {
   echo calendars
   let assert Ok(calendar) = list.find(calendars, fn(c) { c.name == calendar })
 
-  // let assert Ok(e) = echo vtodo.send_create_todo(client, calendar, "Summary")
-  // echo e
-
-  // use <- bool.guard(True, Nil)
   let assert Ok(todos) = vtodo.fetch_todos(client, calendar)
   list.each(todos, fn(t) { echo t })
 }

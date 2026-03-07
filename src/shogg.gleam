@@ -1,6 +1,7 @@
-import gleam/io
+import parsed_it/xml
 
-pub fn main() {
-  io.println("CalDAV client library ready!")
-  io.println("See the example project for usage.")
+pub type ShoggError(error) {
+  SendError(error)
+  DecodeError(xml.XmlDecodeError)
+  ParseError(String)
 }
