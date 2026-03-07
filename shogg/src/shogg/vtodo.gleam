@@ -391,6 +391,37 @@ pub fn send_create_todo(
   parse_create_todo(response, request)
 }
 
+pub fn delete_todo_request(
+  client: Client(_, _),
+  vtodo: VTodo,
+) -> Request(String) {
+  client.request
+  |> request.set_path(vtodo.meta.href)
+  |> request.set_method(http.Delete)
+  |> request.set_header("If-Match", vtodo.meta.etag)
+}
+
+pub fn send_delete_todo(
+  client: Client(_, IO(e)),
+  vtodo: VTodo,
+) -> Result(Nil, ShoggError(e)) {
+  let response = delete_todo_request(client, vtodo) |> client.io.send
+  use response <- result.try(response |> result.map_error(SendError))
+  parse_delete_todo_response(response)
+}
+
+pub fn parse_delete_todo_response(
+  response: Response(String),
+) -> Result(Nil, ShoggError(e)) {
+  case response.status {
+    204 | 200 -> Ok(Nil)
+    _ ->
+      Error(ParseError(
+        "Delete failed with status: " <> int.to_string(response.status),
+      ))
+  }
+}
+
 pub fn parse_create_todo(
   response: Response(String),
   request: Request(String),

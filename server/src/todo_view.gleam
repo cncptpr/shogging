@@ -104,11 +104,17 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       )
     }
     UserDeletedTodo(uid:) -> {
-      let assert Model(_client, _, Some(todos)) = model
-      let assert Ok(_vtodo) = list.find(todos, fn(t) { t.uid == uid })
+      let assert Model(client, _, Some(todos)) = model
+      let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
       let todos = list.filter(todos, fn(t) { t.uid != uid })
-      // TODO: send_remove_todo()
-      #(Model(..model, todos: Some(todos)), effect.none())
+      #(
+        Model(..model, todos: Some(todos)),
+        effect.from(fn(dispatch) {
+          let assert Ok(_) = vtodo.send_delete_todo(client, vtodo)
+          // TODO: Make ShoggSendDelete message
+          ShoggSendUpdate |> dispatch
+        }),
+      )
     }
   }
 }
