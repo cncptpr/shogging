@@ -27,7 +27,7 @@ pub fn serve_html() -> Response(ResponseData) {
           attribute.name("viewport"),
           attribute.content("width=device-width, initial-scale=1"),
         ]),
-        html.title([], "06-server-components/01-basic-setup"),
+        html.title([], "Shogging"),
         html.script(
           // When serving the client runtime for server components, you must
           // remember to set the `type` attribute to `"module"` otherwise it won't
