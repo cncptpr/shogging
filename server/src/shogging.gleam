@@ -14,7 +14,7 @@ import todo_view
 // MAIN ------------------------------------------------------------------------
 
 pub fn main() {
-  let assert Ok(_) = dotenv.config()
+  let _ = dotenv.config()
 
   let assert Ok(host) = envoy.get("CALDAV_HOST")
   let assert Ok(username) = envoy.get("CALDAV_USERNAME")
