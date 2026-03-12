@@ -18,6 +18,21 @@ import todo_message
 
 // HTML ------------------------------------------------------------------------
 
+pub fn serve_static(from module, file file, type_ content_type) {
+  let assert Ok(priv_path) = application.priv_directory(module)
+  let static_path = priv_path <> "/static/" <> file
+  case mist.send_file(static_path, offset: 0, limit: None) {
+    Ok(file) ->
+      response.new(200)
+      |> response.prepend_header("content-type", content_type)
+      |> response.set_body(file)
+
+    Error(_) ->
+      response.new(404)
+      |> response.set_body(mist.Bytes(bytes_tree.new()))
+  }
+}
+
 pub fn serve_html() -> Response(ResponseData) {
   let html =
     html([attribute.lang("en")], [
@@ -29,10 +44,11 @@ pub fn serve_html() -> Response(ResponseData) {
         ]),
         html.title([], "Shogging"),
         html.script(
-          // When serving the client runtime for server components, you must
-          // remember to set the `type` attribute to `"module"` otherwise it won't
-          // work!
           [attribute.type_("module"), attribute.src("/lustre/runtime.mjs")],
+          "",
+        ),
+        html.script(
+          [attribute.type_("module"), attribute.src("/website.js")],
           "",
         ),
         html.link([
@@ -44,15 +60,10 @@ pub fn serve_html() -> Response(ResponseData) {
       ]),
       html.body(
         [attribute.styles([#("max-width", "32rem"), #("margin", "3rem auto")])],
-        // If you're using Lustre to render your HTML like we are here, or if
-        // you're also running Lustre in the browser, you can render the
-        // `<lustre-server-component />` element using `server_component.element`.
-        //
-        // The server_component module also includes attributes that are relevant
-        // to the component. The `server_component.route` attribute tells the
-        // client runtime where to make the websocket connection to the server.
-        // This path should match the path we used in our mist handler above.
-        [server_component.element([server_component.route("/ws")], [])],
+        [
+          html.div([attribute.id("app")], []),
+          // server_component.element([server_component.route("/ws")], []),
+        ],
       ),
     ])
     |> element.to_document_string_tree

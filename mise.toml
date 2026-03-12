@@ -1,0 +1,25 @@
+[tasks.watch]
+description = "Watch for changes and rerun dev"
+run = "watchexec --wrap-process=session --restart -iet 'clear && mise run dev'"
+
+[tasks.dev]
+description = "Run server for dev"
+run = "gleam run"
+depends = [ "web-build" ]
+dir = "server"
+
+[tasks.web-build]
+description = "Build the website into server's /priv/static"
+run = "gleam run -m lustre/dev build --outdir=../server/priv/static && rm ../server/priv/static/index.html"
+dir = "website"
+
+[env]
+CALDAV_HOST = { age = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNzaC1lZDI1NTE5IGtmUyszZyBHelk1Ri9SZndsQUZSQWRsb2pwYk5icEl5eUFMMk1EclV1SEdZN3d2V2tFCmVkdDZ4eDVyWkxEMjA1QXlzQlYxZzhFNDJGNmRPRXpSWHpNeC9oYklZZVEKLT4gM1FBLWdyZWFzZSBiVCAufTN2ICxDbz8kZCBfQTZodUAKRkJ4NGo1RUp3eEQ1cVh0SC9yZGpSald1eHpMMlR4U0FnM0E5ZW5QTFUzZnZPNUZXQ2pJT3E3STR4VjVFemlLZQplc0RHa0h6YzF0OTE2ai9RalNCR2J3bi9iNTJlcmx4UHNuSQotLS0gN09NVDF6L0J0bTY1cFZiODM0alJVSmU1WllUOUxZU0ROWm9OTVpWRm80UQp1KG45Iy5VBq3LiObHYu/Od6Fkp/KMyoKkV6rUYt2k4lDEd/TUXjiPnapqAOHLC880RyiTiA" }
+CALDAV_USERNAME = { age = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNzaC1lZDI1NTE5IGtmUyszZyBUd1ZDMVVZZ2RMM3JvcXRCd1V1T0oveFgyUk13NzhvUFdUV0VKc3o0dDJRCmF3OFQzZjJzSUw1cXNlNVFOZWd0MitFSVRIRitxNHpRMjg2K1ZpZkphUlkKLT4gXi19VytURy1ncmVhc2UgRCAldDpePFpxMSBIcihcfWQlOApIcDNkVmdyZkJ6QlFsOEdEZG1YdVJvN1FSN1NOWnpBWStnCi0tLSBGOFlhNEhoY1hMN1FobDZjNVRBM3IzeUdzWUx2b3lOVERmYUZ2bnJDY3dRCuxH8yw+noJERdNSWpgFW7bY1f8PxkoZTr51lofewV4buX5rz0I" }
+CALDAV_PASSWORD = { age = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNzaC1lZDI1NTE5IGtmUyszZyBJdUx1OVZyQnlsTjcvVFJZYlBOd1UzdjdCc3RnSFpYYTZCVmNXMmhLQ0dVCjA3TWFBYlNTNFNPb3pwSGlRUG91MXk5dVhXRC80Y0NoK1JMQ25UR2Jtd1UKLT4gLkVpLWdyZWFzZQo4ZzB1NGp1a2FiVTJYUXk5ZHVZcVFzejdXMHJhdkZXdGZ3anNhMkFkaE9hUnVvc1FmRjVTWHhYRUdyYWFobVVWCkFxTldhMXdMb25NMnFLaDhoRjVNSEU3bmNIaEcxeElLbUtORlh0enYyUzNZWWcKLS0tIFVWN1BxZWxqaWc4S2x2b3UvRm9VUXJQZEVaUEsvQ1ptMEltVE5vOGNMQTQK2uWyCl0ct0ZdbOkedrsn7IOU2tOQ9jKjoqFSnlDdC5cUPNXTNGRL2EsOzedBmlomQkli0T6WAEH7vV7BJD7i/e5irnhBQfSPvWsAZbEVVxM" }
+CALDAV_CALENDAR = "Personal Calendar"
+
+[tools]
+watchexec = "latest"
+
+# TODO: Add gleam, rebar, etc. here

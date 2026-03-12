@@ -25,13 +25,6 @@ pub fn render(item: vtodo.VTodo) {
     // TODO: how do I do this?
     // - How do I do a text field only on one client? Lustre SPA / Raw JS
     // - How do I send the result to the server? Normal Rest API
-    html.button([attribute.class("outline"), attribute.disabled(True)], [
-      html.img([
-        attribute.src("https://www.svgrepo.com/show/521620/edit.svg"),
-        attribute.width(20),
-        styles([invert]),
-      ]),
-    ]),
     html.button(
       [
         attribute.class("outline"),

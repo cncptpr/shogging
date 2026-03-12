@@ -1,4 +1,3 @@
-import dotenv
 import envoy
 import gleam/bytes_tree
 import gleam/erlang/process
@@ -14,8 +13,6 @@ import todo_view
 // MAIN ------------------------------------------------------------------------
 
 pub fn main() {
-  let _ = dotenv.config()
-
   let assert Ok(host) = envoy.get("CALDAV_HOST")
   let assert Ok(username) = envoy.get("CALDAV_USERNAME")
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
@@ -35,14 +32,19 @@ pub fn main() {
       // In order to get started with server components, we'll need to handle at
       // least three things:
       case request.path_segments(request) {
-        // 1. Serving the HTML document that will render the `<lustre-server-component />`
-        //    custom element.
         [] -> setup.serve_html()
-        // 2. Serving the pre-build JavaScript runtime that registers the custom
-        //    element and handles communication and rendering.
-        ["lustre", "runtime.mjs"] -> setup.serve_runtime()
-        // 3. The websocket connection that the client runtime will connect to
-        //    and the server runtime can push messages to.
+        ["lustre", "runtime.mjs"] ->
+          setup.serve_static(
+            from: "lustre",
+            file: "lustre-server-component.mjs",
+            type_: "application/javascript",
+          )
+        ["website.js"] ->
+          setup.serve_static(
+            from: "shogging",
+            file: "website.js",
+            type_: "application/javascript",
+          )
         ["ws"] -> setup.serve_component(request, component)
         _ -> response.set_body(response.new(404), mist.Bytes(bytes_tree.new()))
       }
@@ -54,3 +56,4 @@ pub fn main() {
 
   process.sleep_forever()
 }
+// asd

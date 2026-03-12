@@ -1,4 +1,3 @@
-import dotenv
 import envoy
 import gleam/hackney
 import gleam/http
@@ -8,8 +7,6 @@ import shogg/client
 import shogg/vtodo
 
 pub fn main() {
-  let assert Ok(_) = dotenv.config()
-
   let assert Ok(host) = envoy.get("CALDAV_HOST")
   let assert Ok(username) = envoy.get("CALDAV_USERNAME")
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
