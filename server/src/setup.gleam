@@ -18,7 +18,7 @@ import todo_message
 
 // HTML ------------------------------------------------------------------------
 
-pub fn serve_static(from module, file file, type_ content_type) {
+pub fn serve_static(from module, serve file, as_ content_type) {
   let assert Ok(priv_path) = application.priv_directory(module)
   let static_path = priv_path <> "/static/" <> file
   case mist.send_file(static_path, offset: 0, limit: None) {
@@ -47,10 +47,6 @@ pub fn serve_html() -> Response(ResponseData) {
           [attribute.type_("module"), attribute.src("/lustre/runtime.mjs")],
           "",
         ),
-        html.script(
-          [attribute.type_("module"), attribute.src("/website.js")],
-          "",
-        ),
         html.link([
           attribute.rel("stylesheet"),
           attribute.href(
@@ -60,10 +56,7 @@ pub fn serve_html() -> Response(ResponseData) {
       ]),
       html.body(
         [attribute.styles([#("max-width", "32rem"), #("margin", "3rem auto")])],
-        [
-          html.div([attribute.id("app")], []),
-          // server_component.element([server_component.route("/ws")], []),
-        ],
+        [server_component.element([server_component.route("/ws")], [])],
       ),
     ])
     |> element.to_document_string_tree
@@ -77,26 +70,11 @@ pub fn serve_html() -> Response(ResponseData) {
 // JAVASCRIPT ------------------------------------------------------------------
 
 pub fn serve_runtime() -> Response(ResponseData) {
-  // Whenever you want to use server components, it's important that you serve
-  // the client runtime to the browser. This small JavaScript module registers
-  // the `<lustre-server-component />` custom element that you'll use in your HTML
-  // to create server components.
-  //
-  // Lustre includes both a standard and a minified version of the runtime. The
-  // minified bundle clocks in at just 10kB before compression!
-  let assert Ok(lustre_priv) = application.priv_directory("lustre")
-  let file_path = lustre_priv <> "/static/lustre-server-component.mjs"
-
-  case mist.send_file(file_path, offset: 0, limit: None) {
-    Ok(file) ->
-      response.new(200)
-      |> response.prepend_header("content-type", "application/javascript")
-      |> response.set_body(file)
-
-    Error(_) ->
-      response.new(404)
-      |> response.set_body(mist.Bytes(bytes_tree.new()))
-  }
+  serve_static(
+    from: "lustre",
+    serve: "lustre-server-component.mjs",
+    as_: "application/javascript",
+  )
 }
 
 // WEBSOCKET -------------------------------------------------------------------

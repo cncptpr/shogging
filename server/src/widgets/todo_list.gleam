@@ -1,6 +1,7 @@
 import gleam/list
 import lustre/attribute.{styles}
 import lustre/element/html
+import lustre/element/keyed
 import lustre/event
 import shogg/vtodo
 import styles.{f, flex, vcenter}
@@ -36,6 +37,9 @@ pub fn render(todos: List(vtodo.VTodo)) {
         html.button([attribute.type_("submit")], [html.text("Add")]),
       ]),
     ]),
-    ..list.map(todos, todo_card.render)
+    keyed.div(
+      [],
+      list.map(todos, fn(item) { #(item.uid, todo_card.render(item)) }),
+    ),
   ])
 }

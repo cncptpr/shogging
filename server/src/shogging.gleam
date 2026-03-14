@@ -33,18 +33,7 @@ pub fn main() {
       // least three things:
       case request.path_segments(request) {
         [] -> setup.serve_html()
-        ["lustre", "runtime.mjs"] ->
-          setup.serve_static(
-            from: "lustre",
-            file: "lustre-server-component.mjs",
-            type_: "application/javascript",
-          )
-        ["website.js"] ->
-          setup.serve_static(
-            from: "shogging",
-            file: "website.js",
-            type_: "application/javascript",
-          )
+        ["lustre", "runtime.mjs"] -> setup.serve_runtime()
         ["ws"] -> setup.serve_component(request, component)
         _ -> response.set_body(response.new(404), mist.Bytes(bytes_tree.new()))
       }
