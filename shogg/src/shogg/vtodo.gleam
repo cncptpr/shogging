@@ -379,13 +379,13 @@ pub fn parse_update_todo_response(
   }
 }
 
-pub fn create_todo_request(
+pub fn create_todo_request_with(
   client: Client(_, _),
   calendar: Calendar,
   summary: String,
+  uid: String,
+  created: String,
 ) -> Request(String) {
-  let uid = uuid.v4_string()
-  let created = timestamp.system_time() |> formal_cal_date()
   let href = calendar.href <> uid <> ".ics"
   let ical_body =
     "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Shogg//EN\r\nBEGIN:VTODO\r\nUID:"
@@ -404,6 +404,16 @@ pub fn create_todo_request(
   |> request.set_body(ical_body)
   |> request.set_header("Content-Type", "text/calendar; charset=utf-8")
   |> request.set_header("If-None-Match", "*")
+}
+
+pub fn create_todo_request(
+  client: Client(_, _),
+  calendar: Calendar,
+  summary: String,
+) -> Request(String) {
+  let uid = uuid.v4_string()
+  let created = timestamp.system_time() |> formal_cal_date()
+  create_todo_request_with(client, calendar, summary, uid, created)
 }
 
 pub fn send_create_todo(

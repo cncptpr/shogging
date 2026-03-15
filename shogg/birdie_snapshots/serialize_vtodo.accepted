@@ -1,0 +1,19 @@
+---
+version: 1.5.4
+title: Serialize VTodo
+file: ./test/shogg/snap_test.gleam
+test_name: serialize_vtodo_test
+---
+BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+UID:test-uid-12345
+DTSTAMP:20240315T120000Z
+CREATED:20240315T120000Z
+STATUS:NEEDS-ACTION
+SUMMARY:Test Todo
+END:VTODO
+END:VCALENDAR
+

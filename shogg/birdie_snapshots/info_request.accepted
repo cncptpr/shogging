@@ -1,0 +1,17 @@
+---
+version: 1.5.4
+title: Info Request
+file: ./test/shogg/client_snap_test.gleam
+test_name: info_test
+---
+PROPFIND /caldav/ https
+authorization: Basic dGltb246bXV0YXRpb24gZW52aWFibGUgY3Jvb24gYWx1bW5pIHRyZW1ibGluZyBzY2huYXBwcw==
+depth: 1
+content-type: application/xml; charset=utf-8
+
+<?xml version="1.0" encoding="utf-8" ?>
+<D:propfind xmlns:D="DAV:">
+  <D:prop>
+    <D:current-user-principal/>
+  </D:prop>
+</D:propfind>

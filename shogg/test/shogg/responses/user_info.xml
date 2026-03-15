@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:"><response><href>/caldav/</href><propstat><prop><current-user-principal><href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href></current-user-principal></prop><status>HTTP/1.1 200 OK</status></propstat></response><response><href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href><propstat><prop><current-user-principal><href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/</href></current-user-principal></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>

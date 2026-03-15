@@ -24,5 +24,5 @@ pub fn new_client_creates_request_with_basic_auth_test() {
 
 pub fn encode_basic_auth_test() {
   let result = client.encode_basic_auth("user", "pass")
-  string.starts_with(result, "Basic ") |> should.be_true()
+  result |> should.equal("Basic dXNlcjpwYXNz")
 }

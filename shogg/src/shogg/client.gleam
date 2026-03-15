@@ -87,9 +87,9 @@ pub fn fetch_user_info(
 }
 
 pub fn parse_user_info(
-  client: Client(_, IO(e)),
+  client: Client(_, _),
   response: Response(String),
-) -> Result(Client(String, IO(e)), ShoggError(e)) {
+) -> Result(Client(String, _), ShoggError(e)) {
   use parsed <- result.try(
     xml.parse(response.body, user_info_decoder())
     |> result.map_error(DecodeError),
@@ -135,6 +135,6 @@ fn user_info_decoder() {
   )
 }
 
-fn set_user_path(client, path: String) {
+pub fn set_user_path(client, path: String) {
   Client(..client, user_path: path)
 }
