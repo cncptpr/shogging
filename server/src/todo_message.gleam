@@ -1,8 +1,6 @@
-import shogg/calendar
 import shogg/vtodo
 
 pub type Msg {
-  ShoggFetchedCalendar(calendar.Calendar)
   ShoggFetchedTodos(List(vtodo.VTodo))
   ShoggSendUpdate
   UserAddedTodo(summary: String)

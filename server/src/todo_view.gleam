@@ -4,20 +4,18 @@ import gleam/hackney
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None, Some}
 import gleam/order
 import gleam/string
 import lustre.{type App}
 import lustre/effect
 import lustre/element.{type Element}
-import lustre/element/html
 import shogg/calendar.{type Calendar}
 import shogg/client.{type IO}
 import shogg/vtodo.{type VTodo}
 import todo_message.{
-  type Msg, ShoggFetchedCalendar, ShoggFetchedTodos, ShoggSendUpdate,
-  UserAddedTodo, UserCheckedTodo, UserClickedReload, UserDeletedTodo,
-  UserRenamedTodo,
+  type Msg, ShoggFetchedTodos, ShoggSendUpdate, UserAddedTodo, UserCheckedTodo,
+  UserClickedReload, UserDeletedTodo, UserRenamedTodo,
 }
 import widgets/todo_list
 
@@ -26,27 +24,17 @@ pub fn component() -> App(_, Model, Msg) {
 }
 
 type Client =
-  client.Client(String, IO(hackney.Error))
+  client.Client(IO(hackney.Error))
 
 // TODO: Split todo into completed, and uncompleted. Hide completed
 pub type Model {
-  Model(client: Client, calendar: Option(Calendar), todos: Option(List(VTodo)))
+  Model(client: Client, calendar: Calendar, todos: List(VTodo))
 }
 
 fn init(data) -> #(Model, _) {
-  let #(client, calendar_name) = data
-  #(
-    Model(client, None, None),
-    effect.from(fn(dispatch) {
-      let assert Ok(calendars) = calendar.fetch_calendars(client)
-      let assert Ok(calendar) =
-        list.find(calendars, fn(c) { c.name == calendar_name })
-      calendar |> ShoggFetchedCalendar |> dispatch
-    }),
-  )
+  let #(client, calendar, todos) = data
+  #(Model(client:, calendar:, todos:), effect.none())
 }
-
-// UPDATE ----------------------------------------------------------------------
 
 fn fetch_todos_effect(model: Model, calendar) {
   effect.from(fn(dispatch) {
@@ -79,31 +67,23 @@ fn sort_todos(todos: List(VTodo)) {
 
 fn update(model: Model, msg: Msg) -> #(Model, _) {
   case msg {
-    ShoggFetchedCalendar(calendar) -> #(
-      Model(..model, calendar: Some(calendar)),
-      fetch_todos_effect(model, calendar),
-    )
     ShoggFetchedTodos(todos) -> {
       io.println("Todos fetched!")
-      #(Model(..model, todos: Some(todos |> sort_todos)), effect.none())
+      #(Model(..model, todos: todos |> sort_todos), effect.none())
     }
     ShoggSendUpdate -> {
-      let assert Some(calendar) = model.calendar
-      #(model, fetch_todos_effect(model, calendar))
+      #(model, fetch_todos_effect(model, model.calendar))
     }
     UserClickedReload -> {
-      let assert Some(calendar) = model.calendar
-      #(model, fetch_todos_effect(model, calendar))
+      #(model, fetch_todos_effect(model, model.calendar))
     }
     UserAddedTodo(summary:) -> {
-      let assert Some(calendar) = model.calendar
       let assert Ok(_href) =
-        vtodo.send_create_todo(model.client, calendar, summary)
-      #(model, fetch_todos_effect(model, calendar))
+        vtodo.send_create_todo(model.client, model.calendar, summary)
+      #(model, fetch_todos_effect(model, model.calendar))
     }
     UserCheckedTodo(uid:, checked:) -> {
-      let assert Model(client, _, Some(todos)) = model
-      let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
+      let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
       // TODO: use Enum for status and timestamp for time.
       let vtodo = case checked {
         True ->
@@ -116,7 +96,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
           vtodo.VTodo(..vtodo, status: Some("NEEDS-ACTION"), completed: None)
       }
       let todos =
-        list.map(todos, fn(t) {
+        list.map(model.todos, fn(t) {
           case t.uid == uid {
             True -> vtodo
             False -> t
@@ -124,19 +104,18 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
         })
         |> sort_todos
       #(
-        Model(..model, todos: Some(todos)),
+        Model(..model, todos:),
         effect.from(fn(dispatch) {
-          let assert Ok(_href) = vtodo.send_update_todo(client, vtodo)
+          let assert Ok(_href) = vtodo.send_update_todo(model.client, vtodo)
           ShoggSendUpdate |> dispatch
         }),
       )
     }
     UserRenamedTodo(uid:, summary:) -> {
-      let assert Model(client, _, Some(todos)) = model
-      let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
+      let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
       let vtodo = vtodo.VTodo(..vtodo, summary: Some(summary))
       let todos =
-        list.map(todos, fn(t) {
+        list.map(model.todos, fn(t) {
           case t.uid == uid {
             True -> vtodo
             False -> t
@@ -144,21 +123,21 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
         })
         |> sort_todos
       #(
-        Model(..model, todos: Some(todos)),
+        Model(..model, todos:),
         effect.from(fn(dispatch) {
-          let assert Ok(_href) = vtodo.send_update_todo(client, vtodo)
+          let assert Ok(_href) = vtodo.send_update_todo(model.client, vtodo)
           ShoggSendUpdate |> dispatch
         }),
       )
     }
     UserDeletedTodo(uid:) -> {
-      let assert Model(client, _, Some(todos)) = model
-      let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
-      let todos = todos |> list.filter(fn(t) { t.uid != uid }) |> sort_todos
+      let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
+      let todos =
+        model.todos |> list.filter(fn(t) { t.uid != uid }) |> sort_todos
       #(
-        Model(..model, todos: Some(todos)),
+        Model(..model, todos:),
         effect.from(fn(dispatch) {
-          let assert Ok(_) = vtodo.send_delete_todo(client, vtodo)
+          let assert Ok(_) = vtodo.send_delete_todo(model.client, vtodo)
           // TODO: Make ShoggSendDelete message
           ShoggSendUpdate |> dispatch
         }),
@@ -170,8 +149,5 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  case model {
-    Model(_, _, Some(todos)) -> todo_list.render(todos)
-    _ -> html.h2([], [html.text("Loading Todos ...")])
-  }
+  todo_list.render(model.todos)
 }

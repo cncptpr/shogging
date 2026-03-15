@@ -1,0 +1,12 @@
+---
+version: 1.5.4
+title: Discovery Request
+file: ./test/shogg/snap_test.gleam
+test_name: discovery_request_test
+---
+> https://calendar.example/
+
+GET /.well-known/caldav
+authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
+
+

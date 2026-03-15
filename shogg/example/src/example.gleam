@@ -12,12 +12,13 @@ pub fn main() {
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
   let assert Ok(calendar) = envoy.get("CALDAV_CALENDAR")
 
-  let assert Ok(client) =
+  let client =
     client.new_client(http.Https, host:, username:, password:)
     |> client.set_io(hackney.send)
-    |> client.fetch_user_info()
+  let assert Ok(server) = client.fetch_server_info(client)
+  let assert Ok(info) = client.fetch_user_info(client, server)
 
-  let assert Ok(calendars) = calendar.fetch_calendars(client)
+  let assert Ok(calendars) = calendar.fetch_calendars(client, info)
   echo calendars
   let assert Ok(calendar) = list.find(calendars, fn(c) { c.name == calendar })
 

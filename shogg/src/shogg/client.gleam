@@ -3,32 +3,33 @@ import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/list
 import gleam/result
+import gleam/string
 import parsed_it/xml
 import shogg.{type ShoggError, DecodeError, ParseError, SendError}
 
-pub type SendFn(error) =
-  fn(Request(String)) -> Result(Response(String), error)
+pub type Client(io) {
+  Client(request: Request(String), io: io)
+}
+
+pub type ServerInfo {
+  ServerInfo(base_path: String)
+}
+
+pub type UserInfo {
+  UserInfo(principal: String)
+}
 
 pub type IO(error) {
   IO(send: SendFn(error))
 }
 
-pub type Client(user_path, io) {
-  Client(
-    request: Request(String),
-    base_path: String,
-    user_path: user_path,
-    io: io,
-  )
-}
+pub type SendFn(error) =
+  fn(Request(String)) -> Result(Response(String), error)
 
 pub opaque type NoIO {
   NoIO
-}
-
-pub opaque type NoUserPath {
-  NoUserPath
 }
 
 pub const http = http.Http
@@ -40,7 +41,7 @@ pub fn new_client(
   host host: String,
   username username: String,
   password password: String,
-) -> Client(NoUserPath, NoIO) {
+) -> Client(NoIO) {
   Client(
     request: request.new()
       |> request.set_scheme(scheme)
@@ -49,13 +50,11 @@ pub fn new_client(
         "authorization",
         encode_basic_auth(username, password),
       ),
-    base_path: "/caldav/",
-    user_path: NoUserPath,
     io: NoIO,
   )
 }
 
-pub fn set_io(client: Client(u, _), send_fn: SendFn(e)) -> Client(u, IO(e)) {
+pub fn set_io(client: Client(_), send_fn: SendFn(e)) -> Client(IO(e)) {
   Client(..client, io: IO(send_fn))
 }
 
@@ -64,10 +63,13 @@ pub fn encode_basic_auth(username: String, password: String) -> String {
   <> bit_array.base64_encode(<<username:utf8, ":":utf8, password:utf8>>, True)
 }
 
-pub fn user_info_request(client: Client(_, _)) -> Request(String) {
+pub fn user_info_request(
+  client: Client(_),
+  server: ServerInfo,
+) -> Request(String) {
   // Make library internal request builder
   client.request
-  |> request.set_path(client.base_path)
+  |> request.set_path(server.base_path)
   |> request.set_method(http.Other("PROPFIND"))
   |> request.set_header("Depth", "1")
   |> request.set_header("Content-Type", "application/xml; charset=utf-8")
@@ -79,17 +81,17 @@ fn user_info_propfind_body() -> String {
 }
 
 pub fn fetch_user_info(
-  client: Client(_, IO(e)),
-) -> Result(Client(String, IO(e)), ShoggError(e)) {
-  let response = user_info_request(client) |> client.io.send
+  client: Client(IO(e)),
+  server: ServerInfo,
+) -> Result(UserInfo, ShoggError(e)) {
+  let response = user_info_request(client, server) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
-  parse_user_info(client, response)
+  parse_user_info(response)
 }
 
 pub fn parse_user_info(
-  client: Client(_, _),
   response: Response(String),
-) -> Result(Client(String, _), ShoggError(e)) {
+) -> Result(UserInfo, ShoggError(e)) {
   use parsed <- result.try(
     xml.parse(response.body, user_info_decoder())
     |> result.map_error(DecodeError),
@@ -97,7 +99,7 @@ pub fn parse_user_info(
   case parsed {
     [] -> Error(ParseError("No responses found"))
     [HomePropfindResponse(current_user_principal:, ..), ..] ->
-      Ok(set_user_path(client, current_user_principal))
+      Ok(UserInfo(current_user_principal))
   }
 }
 
@@ -135,6 +137,35 @@ fn user_info_decoder() {
   )
 }
 
-pub fn set_user_path(client, path: String) {
-  Client(..client, user_path: path)
+pub fn server_info_request(client: Client(_)) -> Request(String) {
+  client.request
+  |> request.set_path("/.well-known/caldav")
+  |> request.set_method(http.Get)
+}
+
+pub fn parse_server_info_response(
+  response: Response(String),
+) -> Result(ServerInfo, ShoggError(e)) {
+  case response.status {
+    301 | 302 | 307 | 308 -> {
+      case list.key_find(response.headers, "location") {
+        Ok(path) -> Ok(ServerInfo(path))
+        Error(Nil) ->
+          Error(ParseError("No Location header in redirect response"))
+      }
+    }
+    _ ->
+      Error(ParseError(
+        "Expected redirect status (301/302/307/308), got "
+        <> string.inspect(response.status),
+      ))
+  }
+}
+
+pub fn fetch_server_info(
+  client: Client(IO(e)),
+) -> Result(ServerInfo, ShoggError(e)) {
+  let response = server_info_request(client) |> client.io.send
+  use response <- result.try(response |> result.map_error(SendError))
+  parse_server_info_response(response)
 }

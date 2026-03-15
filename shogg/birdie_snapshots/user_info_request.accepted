@@ -4,7 +4,9 @@ title: User Info Request
 file: ./test/shogg/snap_test.gleam
 test_name: user_info_request_test
 ---
-PROPFIND /caldav/ HTTPS
+> https://calendar.example/
+
+PROPFIND /caldav/
 authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
 depth: 1
 content-type: application/xml; charset=utf-8

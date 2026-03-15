@@ -76,10 +76,7 @@ pub fn is_competed(vtodo) {
   }
 }
 
-pub fn todos_request(
-  client: Client(_, _),
-  calendar: Calendar,
-) -> Request(String) {
+pub fn todos_request(client: Client(_), calendar: Calendar) -> Request(String) {
   let request_body =
     "<c:calendar-query xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\">
       <d:prop>
@@ -102,7 +99,7 @@ pub fn todos_request(
 }
 
 pub fn fetch_todos(
-  client: Client(_, IO(e)),
+  client: Client(IO(e)),
   calendar: Calendar,
 ) -> Result(List(VTodo), ShoggError(e)) {
   let response = todos_request(client, calendar) |> client.io.send
@@ -344,10 +341,7 @@ pub fn serialize_vtodo(parsed: VTodo) -> String {
   base <> "END:VTODO\r\nEND:VCALENDAR\r\n"
 }
 
-pub fn update_todo_request(
-  client: Client(_, _),
-  vtodo: VTodo,
-) -> Request(String) {
+pub fn update_todo_request(client: Client(_), vtodo: VTodo) -> Request(String) {
   // TODO: update updated_last
   let body = serialize_vtodo(vtodo)
   client.request
@@ -359,7 +353,7 @@ pub fn update_todo_request(
 }
 
 pub fn send_update_todo(
-  client: Client(_, IO(e)),
+  client: Client(IO(e)),
   vtodo: VTodo,
 ) -> Result(Nil, ShoggError(e)) {
   let response = update_todo_request(client, vtodo) |> client.io.send
@@ -380,7 +374,7 @@ pub fn parse_update_todo_response(
 }
 
 pub fn create_todo_request_with(
-  client: Client(_, _),
+  client: Client(_),
   calendar: Calendar,
   summary: String,
   uid: String,
@@ -407,7 +401,7 @@ pub fn create_todo_request_with(
 }
 
 pub fn create_todo_request(
-  client: Client(_, _),
+  client: Client(_),
   calendar: Calendar,
   summary: String,
 ) -> Request(String) {
@@ -417,7 +411,7 @@ pub fn create_todo_request(
 }
 
 pub fn send_create_todo(
-  client: Client(_, IO(e)),
+  client: Client(IO(e)),
   calendar: Calendar,
   summary: String,
 ) -> Result(String, ShoggError(e)) {
@@ -427,10 +421,7 @@ pub fn send_create_todo(
   parse_create_todo(response, request)
 }
 
-pub fn delete_todo_request(
-  client: Client(_, _),
-  vtodo: VTodo,
-) -> Request(String) {
+pub fn delete_todo_request(client: Client(_), vtodo: VTodo) -> Request(String) {
   client.request
   |> request.set_path(vtodo.meta.href)
   |> request.set_method(http.Delete)
@@ -438,7 +429,7 @@ pub fn delete_todo_request(
 }
 
 pub fn send_delete_todo(
-  client: Client(_, IO(e)),
+  client: Client(IO(e)),
   vtodo: VTodo,
 ) -> Result(Nil, ShoggError(e)) {
   let response = delete_todo_request(client, vtodo) |> client.io.send

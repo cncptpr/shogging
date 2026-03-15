@@ -4,7 +4,9 @@ title: Delete Todo Request
 file: ./test/shogg/snap_test.gleam
 test_name: delete_todo_request_test
 ---
-DELETE /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/calendars/work/test-uid-12345.ics HTTPS
+> https://calendar.example/
+
+DELETE /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/calendars/work/test-uid-12345.ics
 authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
 if-match: "abc123"
 

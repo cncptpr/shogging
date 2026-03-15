@@ -10,7 +10,7 @@ import gleam/result
 import gleam/string
 import parsed_it/xml
 import shogg.{type ShoggError, DecodeError, SendError}
-import shogg/client.{type Client, type IO}
+import shogg/client.{type Client, type IO, type UserInfo}
 
 type ResourceType {
   Principal
@@ -65,7 +65,10 @@ fn decode_xml_list(element decoder) {
   ])
 }
 
-pub fn calendars_request(client: Client(String, _)) -> Request(String) {
+pub fn calendars_request(
+  client: Client(_),
+  user_info: UserInfo,
+) -> Request(String) {
   let request_body =
     "<d:propfind xmlns:d=\"DAV:\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\" xmlns:apple=\"http://apple.com/ns:ical/\">
         <d:prop>
@@ -78,7 +81,7 @@ pub fn calendars_request(client: Client(String, _)) -> Request(String) {
       </d:propfind>"
 
   client.request
-  |> request.set_path(client.user_path)
+  |> request.set_path(user_info.principal)
   |> request.set_method(http.Other("PROPFIND"))
   |> request.set_body(request_body)
   |> request.set_header("Depth", "1")
@@ -86,9 +89,10 @@ pub fn calendars_request(client: Client(String, _)) -> Request(String) {
 }
 
 pub fn fetch_calendars(
-  client: Client(String, IO(e)),
+  client: Client(IO(e)),
+  info: UserInfo
 ) -> Result(List(Calendar), ShoggError(e)) {
-  let response = calendars_request(client) |> client.io.send
+  let response = calendars_request(client, info) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
   parse_calendars(response)
 }

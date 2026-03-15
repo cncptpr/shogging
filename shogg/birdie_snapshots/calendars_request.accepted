@@ -4,7 +4,9 @@ title: Calendars Request
 file: ./test/shogg/snap_test.gleam
 test_name: calendars_request_test
 ---
-PROPFIND /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/ HTTPS
+> https://calendar.example/
+
+PROPFIND /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/
 authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
 depth: 1
 content-type: application/xml; charset=utf-8

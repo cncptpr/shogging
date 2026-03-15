@@ -1,3 +1,5 @@
+import shogg/vtodo
+import gleam/list
 import envoy
 import gleam/bytes_tree
 import gleam/erlang/process
@@ -7,10 +9,9 @@ import gleam/http/response.{type Response}
 import lustre
 import mist.{type Connection, type ResponseData}
 import setup
+import shogg/calendar
 import shogg/client
 import todo_view
-
-// MAIN ------------------------------------------------------------------------
 
 pub fn main() {
   let assert Ok(host) = envoy.get("CALDAV_HOST")
@@ -18,24 +19,27 @@ pub fn main() {
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
   let assert Ok(calendar) = envoy.get("CALDAV_CALENDAR")
 
-  let assert Ok(client) =
+  let client =
     client.new_client(client.https, host:, username:, password:)
     |> client.set_io(hackney.send)
-    |> client.fetch_user_info()
+  let assert Ok(server) = client.fetch_server_info(client)
+  let assert Ok(user) = client.fetch_user_info(client, server)
+  let assert Ok(calendars) = calendar.fetch_calendars(client, user)
+  let assert Ok(calendar) = calendars |> list.find(fn(c) { c.name == calendar })
+  let assert Ok(todos) = vtodo.fetch_todos(client, calendar)
 
   let todo_list = todo_view.component()
   let assert Ok(component) =
-    lustre.start_server_component(todo_list, #(client, calendar))
+    lustre.start_server_component(todo_list, #(client, calendar, todos))
 
   let assert Ok(_) =
     fn(request: Request(Connection)) -> Response(ResponseData) {
-      // In order to get started with server components, we'll need to handle at
-      // least three things:
       case request.path_segments(request) {
         [] -> setup.serve_html()
         ["lustre", "runtime.mjs"] -> setup.serve_runtime()
         ["ws"] -> setup.serve_component(request, component)
-        _ -> response.set_body(response.new(404), mist.Bytes(bytes_tree.new()))
+        _ ->
+          response.new(404) |> response.set_body(mist.Bytes(bytes_tree.new()))
       }
     }
     |> mist.new
@@ -45,4 +49,3 @@ pub fn main() {
 
   process.sleep_forever()
 }
-// asd

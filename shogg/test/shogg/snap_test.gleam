@@ -1,9 +1,9 @@
 import birdie
 import gleam/http
 import gleam/http/request
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
-import gleam/string
 import shogg/calendar
 import shogg/client
 import shogg/vtodo
@@ -18,17 +18,22 @@ fn setup_client() {
   let password = "Password"
 
   client.new_client(client.https, host:, username:, password:)
-  |> client.set_user_path("/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/")
 }
 
 fn format_request(req: request.Request(String)) {
-  req.method |> http.method_to_string
+  let port = case req.port {
+    Some(port) -> ":" <> int.to_string(port)
+    None -> ""
+  }
+  "> "
+  <> req.scheme |> http.scheme_to_string
+  <> "://"
+  <> req.host
+  <> port
+  <> "/\n\n"
+  <> req.method |> http.method_to_string
   <> " "
   <> req.path
-  <> " "
-  <> req.scheme
-  |> http.scheme_to_string
-  |> string.uppercase
   <> "\n"
   |> list.fold(over: req.headers, from: _, with: fn(acc, h) {
     acc <> h.0 <> ": " <> h.1 <> "\n"
@@ -67,15 +72,26 @@ fn test_vtodo() {
 }
 
 pub fn user_info_request_test() {
+  let server = client.ServerInfo(base_path: "/caldav/")
   setup_client()
-  |> client.user_info_request
+  |> client.user_info_request(server)
   |> format_request
   |> birdie.snap(title: "User Info Request")
 }
 
-pub fn calendars_request_test() {
+pub fn discovery_request_test() {
   setup_client()
-  |> calendar.calendars_request
+  |> client.server_info_request
+  |> format_request
+  |> birdie.snap(title: "Discovery Request")
+}
+
+pub fn calendars_request_test() {
+  let user_info =
+    client.UserInfo("/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/")
+
+  setup_client()
+  |> calendar.calendars_request(user_info)
   |> format_request
   |> birdie.snap(title: "Calendars Request")
 }
