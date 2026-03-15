@@ -1,9 +1,12 @@
 // IMPORTS ---------------------------------------------------------------------
 
 import gleam/hackney
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
+import gleam/string
 import lustre.{type App}
 import lustre/effect
 import lustre/element.{type Element}
@@ -18,27 +21,14 @@ import todo_message.{
 }
 import widgets/todo_list
 
-// MAIN ------------------------------------------------------------------------
-
-/// The only difference between this module and the counter defined in
-/// 05-components/01-basic-setup is this function. The client component example
-/// exposes a `register` function to register the custom element, but here we
-/// expose a `component` function that constructs a Lustre application but does
-/// not start it.
-///
-/// It's common practice to provide both functions so that your users can choose
-/// where to run the component. This is known as a **universal component** because
-/// it can run in both the browser and the server.
-///
 pub fn component() -> App(_, Model, Msg) {
   lustre.application(init, update, view)
 }
 
-// MODEL -----------------------------------------------------------------------
-
 type Client =
   client.Client(String, IO(hackney.Error))
 
+// TODO: Split todo into completed, and uncompleted. Hide completed
 pub type Model {
   Model(client: Client, calendar: Option(Calendar), todos: Option(List(VTodo)))
 }
@@ -65,6 +55,28 @@ fn fetch_todos_effect(model: Model, calendar) {
   })
 }
 
+fn sort_todos(todos: List(VTodo)) {
+  todos
+  |> list.sort(fn(a, b) {
+    let assert Some(a) = a.summary
+    let assert Some(b) = b.summary
+    string.compare(a, b)
+  })
+  |> list.sort(fn(a, b) {
+    case a.x_apple_sort_order, b.x_apple_sort_order {
+      Some(a), Some(b) -> int.compare(a, b)
+      _, _ -> order.Lt
+    }
+  })
+  |> list.sort(fn(a, b) {
+    case vtodo.is_competed(a), vtodo.is_competed(b) {
+      True, False -> order.Gt
+      False, True -> order.Lt
+      _, _ -> order.Eq
+    }
+  })
+}
+
 fn update(model: Model, msg: Msg) -> #(Model, _) {
   case msg {
     ShoggFetchedCalendar(calendar) -> #(
@@ -73,7 +85,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
     )
     ShoggFetchedTodos(todos) -> {
       io.println("Todos fetched!")
-      #(Model(..model, todos: Some(todos)), effect.none())
+      #(Model(..model, todos: Some(todos |> sort_todos)), effect.none())
     }
     ShoggSendUpdate -> {
       let assert Some(calendar) = model.calendar
@@ -110,6 +122,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
             False -> t
           }
         })
+        |> sort_todos
       #(
         Model(..model, todos: Some(todos)),
         effect.from(fn(dispatch) {
@@ -129,6 +142,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
             False -> t
           }
         })
+        |> sort_todos
       #(
         Model(..model, todos: Some(todos)),
         effect.from(fn(dispatch) {
@@ -140,7 +154,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
     UserDeletedTodo(uid:) -> {
       let assert Model(client, _, Some(todos)) = model
       let assert Ok(vtodo) = list.find(todos, fn(t) { t.uid == uid })
-      let todos = list.filter(todos, fn(t) { t.uid != uid })
+      let todos = todos |> list.filter(fn(t) { t.uid != uid }) |> sort_todos
       #(
         Model(..model, todos: Some(todos)),
         effect.from(fn(dispatch) {

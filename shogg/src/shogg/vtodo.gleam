@@ -256,7 +256,8 @@ fn parse_vtodo(lines: List(String), parsed: VTodo) -> Result(VTodo, String) {
         #("LAST-MODIFIED", value) ->
           Ok(VTodo(..new_parsed, last_modified: Some(value)))
         #("STATUS", value) -> Ok(VTodo(..new_parsed, status: Some(value)))
-        #("SUMMARY", value) -> Ok(VTodo(..new_parsed, summary: Some(value)))
+        #("SUMMARY", value) ->
+          Ok(VTodo(..new_parsed, summary: Some(value |> remove_escape)))
         #("COMPLETED", value) -> Ok(VTodo(..new_parsed, completed: Some(value)))
         #("PERCENT-COMPLETE", value) ->
           case int.parse(value) {
@@ -275,9 +276,27 @@ fn parse_vtodo(lines: List(String), parsed: VTodo) -> Result(VTodo, String) {
   }
 }
 
-pub fn serialize_parsed_todo(parsed: VTodo) -> String {
+const chars_to_escape = [",", ";", "\\"]
+
+fn remove_escape(text) {
+  list.fold(chars_to_escape, text, fn(text, char) {
+    text
+    |> string.split("\\" <> char)
+    |> string.join(char)
+  })
+}
+
+fn escape(text) {
+  list.fold(chars_to_escape, text, fn(text, char) {
+    text
+    |> string.split(char)
+    |> string.join("\\" <> char)
+  })
+}
+
+pub fn serialize_vtodo(parsed: VTodo) -> String {
   let base =
-    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Gleam CalDAV//EN\r\nBEGIN:VTODO\r\n"
+    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Shogg//EN\r\nBEGIN:VTODO\r\n"
   let base = base <> "UID:" <> parsed.uid <> "\r\n"
   let base = base <> "DTSTAMP:" <> parsed.dtstamp <> "\r\n"
   let base = case parsed.created {
@@ -293,7 +312,7 @@ pub fn serialize_parsed_todo(parsed: VTodo) -> String {
     None -> base
   }
   let base = case parsed.summary {
-    Some(v) -> base <> "SUMMARY:" <> v <> "\r\n"
+    Some(v) -> base <> "SUMMARY:" <> v |> escape <> "\r\n"
     None -> base
   }
   let base = case parsed.completed {
@@ -319,7 +338,9 @@ pub fn serialize_parsed_todo(parsed: VTodo) -> String {
     })
   let base =
     other_fields
-    |> list.fold(base, fn(acc, o) { acc <> o.0 <> ":" <> o.1 <> "\r\n" })
+    |> list.fold(base, fn(acc, o) {
+      acc <> o.0 <> ":" <> o.1 |> escape <> "\r\n"
+    })
   base <> "END:VTODO\r\nEND:VCALENDAR\r\n"
 }
 
@@ -328,7 +349,7 @@ pub fn update_todo_request(
   vtodo: VTodo,
 ) -> Request(String) {
   // TODO: update updated_last
-  let body = serialize_parsed_todo(vtodo)
+  let body = serialize_vtodo(vtodo)
   client.request
   |> request.set_path(vtodo.meta.href)
   |> request.set_method(http.Put)
@@ -374,7 +395,7 @@ pub fn create_todo_request(
     <> "\r\nCREATED:"
     <> created
     <> "\r\nSTATUS:NEEDS-ACTION\r\nSUMMARY:"
-    <> summary
+    <> summary |> escape
     <> "\r\nEND:VTODO\r\nEND:VCALENDAR\r\n"
 
   client.request

@@ -1,4 +1,3 @@
-import gleam/function
 import gleam/list
 import gleam/option.{Some}
 import lustre/attribute.{styles}
@@ -20,50 +19,56 @@ pub fn render(item: vtodo.VTodo) {
   let assert Some(summary) = item.summary
   let popover_id = "rename-prompt-" <> item.uid
   element.fragment([
-    html.label([styles([flex, vcenter, width("inherit")])], [
-      html.input([
-        attribute.type_("checkbox"),
-        attribute.checked(completed),
-        event.on_check(UserCheckedTodo(item.uid, _)),
-      ]),
-      html.span([styles([f(1)])], [
-        case completed {
-          True ->
-            html.del([attribute.style("color", "grey")], [html.text(summary)])
-          False -> html.text(summary)
-        },
-      ]),
-      // TODO: how do I do this?
-      // - How do I do a text field only on one client? Lustre SPA / Raw JS
-      // - How do I send the result to the server? Normal Rest API
-      //
-      html.button(
-        [
-          attribute.popovertarget(popover_id),
-          attribute.class("outline"),
-        ],
-        [
-          html.img([
-            attribute.src("https://www.svgrepo.com/show/521620/edit.svg"),
-            attribute.width(20),
-            styles([invert]),
-          ]),
-        ],
-      ),
-      html.button(
-        [
-          attribute.class("outline"),
-          event.on_click(todo_message.UserDeletedTodo(item.uid)),
-        ],
-        [
-          html.img([
-            attribute.src("https://www.svgrepo.com/show/533007/trash.svg"),
-            attribute.width(20),
-            styles([invert]),
-          ]),
-        ],
-      ),
-    ]),
+    html.label(
+      [
+        styles([
+          flex,
+          vcenter,
+          width("inherit"),
+          #("transition", "all 0.3s ease"),
+        ]),
+      ],
+      [
+        html.input([
+          attribute.type_("checkbox"),
+          attribute.checked(completed),
+          event.on_check(UserCheckedTodo(item.uid, _)),
+        ]),
+        html.span([styles([f(1)])], [
+          case completed {
+            True ->
+              html.del([attribute.style("color", "grey")], [html.text(summary)])
+            False -> html.text(summary)
+          },
+        ]),
+        html.button(
+          [
+            attribute.popovertarget(popover_id),
+            attribute.class("outline"),
+          ],
+          [
+            html.img([
+              attribute.src("https://www.svgrepo.com/show/521620/edit.svg"),
+              attribute.width(20),
+              styles([invert]),
+            ]),
+          ],
+        ),
+        html.button(
+          [
+            attribute.class("outline"),
+            event.on_click(todo_message.UserDeletedTodo(item.uid)),
+          ],
+          [
+            html.img([
+              attribute.src("https://www.svgrepo.com/show/533007/trash.svg"),
+              attribute.width(20),
+              styles([invert]),
+            ]),
+          ],
+        ),
+      ],
+    ),
     html.div(
       [
         attribute.id(popover_id),
