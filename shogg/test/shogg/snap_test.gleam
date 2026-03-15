@@ -4,6 +4,7 @@ import gleam/http/request
 import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/time/timestamp
 import shogg/calendar
 import shogg/client
 import shogg/vtodo
@@ -116,7 +117,7 @@ pub fn create_todo_request_test() {
     test_calendar(),
     "New Todo",
     "test-uid-fixed",
-    "20240315T120000Z",
+    timestamp.from_unix_seconds(0),
   )
   |> format_request
   |> birdie.snap(title: "Create Todo Request")

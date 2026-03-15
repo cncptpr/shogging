@@ -9,7 +9,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import gleam/time/calendar as dt
-import gleam/time/timestamp
+import gleam/time/timestamp.{type Timestamp}
 import parsed_it/xml
 import shogg.{type ShoggError, DecodeError, ParseError, SendError}
 import shogg/calendar.{type Calendar}
@@ -46,11 +46,7 @@ fn decode_xml_list(element decoder) {
   ])
 }
 
-pub fn get_now_formatted() {
-  timestamp.system_time() |> formal_cal_date()
-}
-
-pub fn formal_cal_date(now: timestamp.Timestamp) {
+pub fn format_cal_date(now: Timestamp) {
   let #(dt.Date(year, month, day), dt.TimeOfDay(hours, minutes, seconds, _)) =
     now |> timestamp.to_calendar(dt.utc_offset)
 
@@ -378,9 +374,10 @@ pub fn create_todo_request_with(
   calendar: Calendar,
   summary: String,
   uid: String,
-  created: String,
+  created: Timestamp,
 ) -> Request(String) {
   let href = calendar.href <> uid <> ".ics"
+  let created = created |> format_cal_date
   let ical_body =
     "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Shogg//EN\r\nBEGIN:VTODO\r\nUID:"
     <> uid
@@ -405,9 +402,13 @@ pub fn create_todo_request(
   calendar: Calendar,
   summary: String,
 ) -> Request(String) {
-  let uid = uuid.v4_string()
-  let created = timestamp.system_time() |> formal_cal_date()
-  create_todo_request_with(client, calendar, summary, uid, created)
+  create_todo_request_with(
+    client,
+    calendar,
+    summary,
+    uuid.v4_string(),
+    timestamp.system_time(),
+  )
 }
 
 pub fn send_create_todo(

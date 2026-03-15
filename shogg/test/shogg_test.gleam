@@ -1,6 +1,5 @@
 import gleam/http
 import gleam/http/request
-import gleam/string
 import gleeunit
 import gleeunit/should
 import shogg/client.{ServerInfo}
@@ -11,7 +10,7 @@ pub fn main() {
 
 pub fn new_client_creates_request_with_basic_auth_test() {
   let client =
-    client.new_client(http.Https, "caldav.example.com", "testuser", "testpass")
+    client.new_client(http.Https, "caldav.example.com", "user", "pass")
 
   let req = client.user_info_request(client, ServerInfo("/caldav/"))
 
@@ -19,10 +18,5 @@ pub fn new_client_creates_request_with_basic_auth_test() {
   req.host |> should.equal("caldav.example.com")
 
   let assert Ok(auth_header) = request.get_header(req, "authorization")
-  string.starts_with(auth_header, "Basic ") |> should.be_true()
-}
-
-pub fn encode_basic_auth_test() {
-  let result = client.encode_basic_auth("user", "pass")
-  result |> should.equal("Basic dXNlcjpwYXNz")
+  auth_header |> should.equal("Basic dXNlcjpwYXNz")
 }

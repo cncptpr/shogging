@@ -12,15 +12,7 @@ import parsed_it/xml
 import shogg.{type ShoggError, DecodeError, SendError}
 import shogg/client.{type Client, type IO, type UserInfo}
 
-type ResourceType {
-  Principal
-  Collection
-  CardDAVAdressbook
-  CalDAVCalendar
-  Other(String)
-}
-
-pub type CalDAVComponent {
+pub type VComponent {
   VEvent
   VJournal
   VTodo
@@ -31,38 +23,19 @@ pub type Calendar {
     href: String,
     name: String,
     ctag: String,
-    components: List(CalDAVComponent),
+    components: List(VComponent),
     // TODO: Fix Color
     color: Option(String),
   )
 }
 
-type GetCalendarsProp {
-  GetCalendarsProp(
-    resource_types: Option(List(ResourceType)),
-    display_name: Option(String),
-    ctag: Option(String),
-    supported_components: Option(List(CalDAVComponent)),
-    ical_calendar_color: Option(String),
-  )
-}
-
-type GetCalendarsResponse {
-  GetCalendarsResponse(href: String, prop: GetCalendarsProp)
-}
-
-fn decode_text_field(name name, cb cb) {
-  decode.field(name, decode_text(), cb)
-}
-
-fn decode_text() {
-  decode.field("$text", decode.string, decode.success)
-}
-
-fn decode_xml_list(element decoder) {
-  decode.one_of(decode.list(decoder), or: [
-    decoder |> decode.map(fn(v) { [v] }),
-  ])
+pub fn fetch_calendars(
+  client: Client(IO(e)),
+  info: UserInfo,
+) -> Result(List(Calendar), ShoggError(e)) {
+  let response = calendars_request(client, info) |> client.io.send
+  use response <- result.try(response |> result.map_error(SendError))
+  parse_calendars(response)
 }
 
 pub fn calendars_request(
@@ -88,26 +61,53 @@ pub fn calendars_request(
   |> request.set_header("Content-Type", "application/xml; charset=utf-8")
 }
 
-pub fn fetch_calendars(
-  client: Client(IO(e)),
-  info: UserInfo
-) -> Result(List(Calendar), ShoggError(e)) {
-  let response = calendars_request(client, info) |> client.io.send
-  use response <- result.try(response |> result.map_error(SendError))
-  parse_calendars(response)
-}
-
 pub fn parse_calendars(
   response: Response(String),
 ) -> Result(List(Calendar), ShoggError(e)) {
   use parsed <- result.try(
-    xml.parse(response.body, get_calendars_responses_decoder())
+    xml.parse(response.body, calendars_responses_decoder())
     |> result.map_error(DecodeError),
   )
   Ok(responses_to_calendar(parsed))
 }
 
-fn decode_get_calendars_propstat() {
+type ResourceType {
+  Principal
+  Collection
+  CardDAVAdressbook
+  CalDAVCalendar
+  Other(String)
+}
+
+type GetCalendarsProp {
+  GetCalendarsProp(
+    resource_types: Option(List(ResourceType)),
+    display_name: Option(String),
+    ctag: Option(String),
+    supported_components: Option(List(VComponent)),
+    ical_calendar_color: Option(String),
+  )
+}
+
+type GetCalendarsResponse {
+  GetCalendarsResponse(href: String, prop: GetCalendarsProp)
+}
+
+fn decode_text_field(name name, cb cb) {
+  decode.field(name, decode_text(), cb)
+}
+
+fn decode_text() {
+  decode.field("$text", decode.string, decode.success)
+}
+
+fn decode_xml_list(element decoder) {
+  decode.one_of(decode.list(decoder), or: [
+    decoder |> decode.map(fn(v) { [v] }),
+  ])
+}
+
+fn decode_calendars_propstat() {
   use status <- decode_text_field("status")
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
@@ -134,7 +134,7 @@ fn decode_get_calendars_propstat() {
       decode_text() |> decode.map(Some),
     )
     use ical_calendar_color <- decode.optional_field(
-      "ICAL:calendar-color",
+      "ns3:calendar-color",
       None,
       decode_text() |> decode.map(Some),
     )
@@ -192,14 +192,14 @@ fn decode_get_calendars_propstat() {
   Some(prop) |> decode.success
 }
 
-fn decode_get_calendars_response() {
+fn decode_calendars_response() {
   use href <- decode.field(
     "href",
     decode.field("$text", decode.string, decode.success),
   )
   use props <- decode.field(
     "propstat",
-    decode_xml_list(decode_get_calendars_propstat()),
+    decode_xml_list(decode_calendars_propstat()),
   )
   case props |> option.values() |> list.first() {
     Ok(prop) -> GetCalendarsResponse(href, prop) |> decode.success
@@ -209,7 +209,7 @@ fn decode_get_calendars_response() {
   }
 }
 
-fn get_calendars_responses_decoder() {
+fn calendars_responses_decoder() {
   use root_tag <- decode.field("$tag", decode.string)
   let expected_root_tag = "multistatus"
   use <- bool.guard(
@@ -227,30 +227,38 @@ fn get_calendars_responses_decoder() {
 
   use responses <- decode.field(
     "response",
-    decode_xml_list(decode_get_calendars_response()),
+    decode_xml_list(decode_calendars_response()),
   )
   responses |> decode.success
 }
 
+// TODO: Parse Namespaces
 fn assert_namespaces_decoder() {
   use xmlns <- decode.field("xmlns", decode.string)
-  use <- guarl_ns(
+  use <- guard_ns(
     found: xmlns,
     expected: "DAV:",
     attr_name: "xmlns",
     ns_name: "default",
   )
   use xmlns_c <- decode.field("xmlns:C", decode.string)
-  use <- guarl_ns(
+  use <- guard_ns(
     found: xmlns_c,
     expected: "urn:ietf:params:xml:ns:caldav",
     attr_name: "xmlns:C",
     ns_name: "CalDAV",
   )
+  use xmlns_ns3 <- decode.field("xmlns:ns3", decode.string)
+  use <- guard_ns(
+    found: xmlns_ns3,
+    expected: "http://apple.com/ns:ical/",
+    attr_name: "xmlns:ns3",
+    ns_name: "Apple iCal",
+  )
   decode.success(Nil)
 }
 
-fn guarl_ns(
+fn guard_ns(
   found namespace,
   expected expected,
   attr_name attr,

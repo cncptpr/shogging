@@ -98,7 +98,7 @@ pub fn parse_discovery_response_301_test() {
       headers: [#("location", "/caldav/user/")],
       body: "",
     )
-  let assert Ok(server) = client.parse_server_info_response(response)
+  let assert Ok(server) = client.parse_server_info(response)
   server |> should.equal(client.ServerInfo("/caldav/user/"))
 }
 
@@ -109,7 +109,7 @@ pub fn parse_discovery_response_302_test() {
       headers: [#("location", "/caldav/")],
       body: "",
     )
-  let assert Ok(server) = client.parse_server_info_response(response)
+  let assert Ok(server) = client.parse_server_info(response)
   server |> should.equal(client.ServerInfo("/caldav/"))
 }
 
@@ -120,23 +120,23 @@ pub fn parse_discovery_response_307_test() {
       headers: [#("location", "/some/path/")],
       body: "",
     )
-  let assert Ok(server) = client.parse_server_info_response(response)
+  let assert Ok(server) = client.parse_server_info(response)
   server |> should.equal(client.ServerInfo("/some/path/"))
 }
 
 pub fn parse_discovery_response_308_test() {
   let response =
     response.Response(status: 308, headers: [#("location", "/dav/")], body: "")
-  let assert Ok(path) = client.parse_server_info_response(response)
+  let assert Ok(path) = client.parse_server_info(response)
   path |> should.equal(client.ServerInfo("/dav/"))
 }
 
 pub fn parse_discovery_response_no_location_test() {
   let response = response.Response(status: 301, headers: [], body: "")
-  client.parse_server_info_response(response) |> should.be_error()
+  client.parse_server_info(response) |> should.be_error()
 }
 
 pub fn parse_discovery_response_non_redirect_test() {
   let response = response.Response(status: 200, headers: [], body: "OK")
-  client.parse_server_info_response(response) |> should.be_error()
+  client.parse_server_info(response) |> should.be_error()
 }
