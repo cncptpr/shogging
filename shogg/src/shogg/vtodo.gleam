@@ -269,7 +269,7 @@ fn parse_vtodo(lines: List(String), parsed: VTodo) -> Result(VTodo, String) {
   }
 }
 
-const chars_to_escape = [",", ";", "\\"]
+const chars_to_escape = ["\\", ",", ";"]
 
 fn remove_escape(text) {
   list.fold(chars_to_escape, text, fn(text, char) {

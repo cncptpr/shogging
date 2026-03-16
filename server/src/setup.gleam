@@ -47,6 +47,35 @@ pub fn serve_html() -> Response(ResponseData) {
           [attribute.type_("module"), attribute.src("/lustre/runtime.mjs")],
           "",
         ),
+        html.script(
+          [
+            attribute.src(
+              "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js",
+            ),
+            attribute.attribute("defer", ""),
+          ],
+          "",
+        ),
+        html.script(
+          [],
+          "
+            console.log('asd')
+            document.addEventListener('alpine:init', () => {
+              console.log('asd')
+              customElements.whenDefined('lustre-server-component').then(() => {
+                console.log('asd')
+                const host = document.querySelector('lustre-server-component');
+                setTimeout(()=>{
+                console.log(host.shadowRoot)
+                if (host?.shadowRoot) {
+                  console.log('asd')
+                  Alpine.initTree(host.shadowRoot);
+                }
+              }, 1000)
+              });
+            });
+          ",
+        ),
         html.link([
           attribute.rel("stylesheet"),
           attribute.href(

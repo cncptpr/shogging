@@ -13,6 +13,7 @@ import gleam/time/timestamp
 import lustre.{type App}
 import lustre/effect
 import lustre/element.{type Element}
+import lustre/element/html
 import shogg/calendar.{type Calendar}
 import shogg/client.{type IO}
 import shogg/vtodo.{type VTodo}
