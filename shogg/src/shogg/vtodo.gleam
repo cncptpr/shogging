@@ -4,6 +4,7 @@ import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -70,6 +71,7 @@ pub fn formal_cal_date(now: timestamp.Timestamp) {
 
 pub fn is_competed(vtodo) {
   case vtodo {
+    VTodo(percent_complete: Some(100), ..) -> True
     VTodo(status: Some("COMPLETED"), ..) -> True
     VTodo(status: None, completed: Some(_), ..) -> True
     _ -> False

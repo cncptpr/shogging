@@ -7,6 +7,7 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/order
 import gleam/string
+import gleam/uri
 import lustre.{type App}
 import lustre/effect
 import lustre/element.{type Element}
@@ -91,9 +92,15 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
             ..vtodo,
             status: Some("COMPLETED"),
             completed: Some(vtodo.get_now_formatted()),
+            percent_complete: Some(100),
           )
         False ->
-          vtodo.VTodo(..vtodo, status: Some("NEEDS-ACTION"), completed: None)
+          vtodo.VTodo(
+            ..vtodo,
+            status: Some("NEEDS-ACTION"),
+            completed: None,
+            percent_complete: None,
+          )
       }
       let todos =
         list.map(model.todos, fn(t) {
