@@ -1,5 +1,6 @@
 // IMPORTS ---------------------------------------------------------------------
 
+import gleam/erlang/process
 import gleam/hackney
 import gleam/int
 import gleam/io
@@ -7,6 +8,8 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/order
 import gleam/string
+import gleam/time/duration
+import gleam/time/timestamp
 import lustre.{type App}
 import lustre/effect
 import lustre/element.{type Element}
@@ -14,8 +17,9 @@ import shogg/calendar.{type Calendar}
 import shogg/client.{type IO}
 import shogg/vtodo.{type VTodo}
 import todo_message.{
-  type Msg, ShoggFetchedTodos, ShoggSendUpdate, UserAddedTodo, UserCheckedTodo,
-  UserClickedReload, UserDeletedTodo, UserRenamedTodo,
+  type Msg, ShoggDetectedChange, ShoggFetchedTodos, ShoggSendUpdate,
+  UserAddedTodo, UserCheckedTodo, UserClickedReload, UserDeletedTodo,
+  UserRenamedTodo,
 }
 import widgets/todo_list
 
@@ -28,19 +32,48 @@ type Client =
 
 // TODO: Split todo into completed, and uncompleted. Hide completed
 pub type Model {
-  Model(client: Client, calendar: Calendar, todos: List(VTodo))
+  Model(
+    client: Client,
+    calendar: Calendar,
+    todos: List(VTodo),
+    check_change_delay: duration.Duration,
+  )
 }
 
 fn init(data) -> #(Model, _) {
-  let #(client, calendar, todos) = data
-  #(Model(client:, calendar:, todos:), effect.none())
+  let #(client, calendar, todos, seconds) = data
+  let model =
+    Model(
+      client:,
+      calendar:,
+      todos: todos |> sort_todos,
+      check_change_delay: duration.seconds(seconds),
+    )
+  #(model, spawn_check_changed_effect(model))
 }
 
-fn fetch_todos_effect(model: Model, calendar) {
+fn fetch_todos_effect(model: Model) {
   effect.from(fn(dispatch) {
-    let assert Ok(todos) = vtodo.fetch_todos(model.client, calendar)
+    let assert Ok(todos) = vtodo.fetch_todos(model.client, model.calendar)
     todos |> ShoggFetchedTodos |> dispatch
   })
+}
+
+fn check_changed_loop(model: Model, dispatch) {
+  model.check_change_delay |> duration.to_milliseconds |> process.sleep
+  let assert Ok(change) = calendar.has_changed(model.client, model.calendar)
+  case change {
+    calendar.Changed(calendar) -> calendar |> ShoggDetectedChange |> dispatch
+    calendar.Unchanged -> check_changed_loop(model, dispatch)
+  }
+}
+
+/// Spawns a new process, that repeatedly checks the CalDAV Server for a change.
+/// When a change is detected, sends a `ShoggChangeDetected` Message, and terminates.
+fn spawn_check_changed_effect(model: Model) {
+  use dispatch <- effect.from()
+  process.spawn(fn() { check_changed_loop(model, dispatch) })
+  Nil
 }
 
 fn sort_todos(todos: List(VTodo)) {
@@ -72,15 +105,15 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       #(Model(..model, todos: todos |> sort_todos), effect.none())
     }
     ShoggSendUpdate -> {
-      #(model, fetch_todos_effect(model, model.calendar))
+      #(model, effect.none())
     }
     UserClickedReload -> {
-      #(model, fetch_todos_effect(model, model.calendar))
+      #(model, fetch_todos_effect(model))
     }
     UserAddedTodo(summary:) -> {
       let assert Ok(_href) =
         vtodo.send_create_todo(model.client, model.calendar, summary)
-      #(model, fetch_todos_effect(model, model.calendar))
+      #(model, effect.none())
     }
     UserCheckedTodo(uid:, checked:) -> {
       let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
@@ -90,7 +123,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
           vtodo.VTodo(
             ..vtodo,
             status: Some("COMPLETED"),
-            completed: Some(vtodo.get_now_formatted()),
+            completed: Some(timestamp.system_time() |> vtodo.format_cal_date),
           )
         False ->
           vtodo.VTodo(..vtodo, status: Some("NEEDS-ACTION"), completed: None)
@@ -141,6 +174,16 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
           // TODO: Make ShoggSendDelete message
           ShoggSendUpdate |> dispatch
         }),
+      )
+    }
+    ShoggDetectedChange(calendar) -> {
+      let model = Model(..model, calendar:)
+      #(
+        model,
+        effect.batch([
+          fetch_todos_effect(model),
+          spawn_check_changed_effect(model),
+        ]),
       )
     }
   }

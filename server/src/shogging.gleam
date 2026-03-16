@@ -1,16 +1,18 @@
-import shogg/vtodo
-import gleam/list
 import envoy
 import gleam/bytes_tree
 import gleam/erlang/process
 import gleam/hackney
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/int
+import gleam/list
+import gleam/result
 import lustre
 import mist.{type Connection, type ResponseData}
 import setup
 import shogg/calendar
 import shogg/client
+import shogg/vtodo
 import todo_view
 
 pub fn main() {
@@ -18,6 +20,8 @@ pub fn main() {
   let assert Ok(username) = envoy.get("CALDAV_USERNAME")
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
   let assert Ok(calendar) = envoy.get("CALDAV_CALENDAR")
+  let assert Ok(delay) =
+    envoy.get("CHECK_CHANGE_DELAY") |> result.try(int.parse)
 
   let client =
     client.new_client(client.https, host:, username:, password:)
@@ -30,7 +34,7 @@ pub fn main() {
 
   let todo_list = todo_view.component()
   let assert Ok(component) =
-    lustre.start_server_component(todo_list, #(client, calendar, todos))
+    lustre.start_server_component(todo_list, #(client, calendar, todos, delay))
 
   let assert Ok(_) =
     fn(request: Request(Connection)) -> Response(ResponseData) {

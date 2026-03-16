@@ -9,7 +9,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import parsed_it/xml
-import shogg.{type ShoggError, DecodeError, SendError}
+import shogg.{type ShoggError, DecodeError, ParseError, SendError}
 import shogg/client.{type Client, type IO, type UserInfo}
 
 pub type VComponent {
@@ -27,6 +27,11 @@ pub type Calendar {
     // TODO: Fix Color
     color: Option(String),
   )
+}
+
+pub type Change(a) {
+  Changed(a)
+  Unchanged
 }
 
 pub fn fetch_calendars(
@@ -302,4 +307,122 @@ fn responses_to_calendar(responses: List(GetCalendarsResponse)) {
       _ -> Error(Nil)
     }
   })
+}
+
+pub fn changed_request(client: Client(_), calendar: Calendar) -> Request(String) {
+  let request_body =
+    "<d:propfind xmlns:d=\"DAV:\" xmlns:cs=\"http://calendarserver.org/ns/\">
+      <d:prop>
+        <cs:getctag/>
+      </d:prop>
+    </d:propfind>"
+
+  client.request
+  |> request.set_path(calendar.href)
+  |> request.set_method(http.Other("PROPFIND"))
+  |> request.set_body(request_body)
+  |> request.set_header("Depth", "0")
+  |> request.set_header("Content-Type", "application/xml; charset=utf-8")
+}
+
+pub fn parse_changed(
+  calendar: Calendar,
+  response: Response(String),
+) -> Result(Change(Calendar), ShoggError(e)) {
+  use parsed <- result.try(
+    xml.parse(response.body, ctag_decoder())
+    |> result.map_error(DecodeError),
+  )
+  case parsed {
+    [] -> Error(ParseError("No ctag response found"))
+    [CtagResponse(ctag:), ..] -> {
+      let new_calendar = Calendar(..calendar, ctag: ctag)
+      case ctag == calendar.ctag {
+        True -> Ok(Unchanged)
+        False -> Ok(Changed(new_calendar))
+      }
+    }
+  }
+}
+
+pub fn has_changed(
+  client: Client(IO(e)),
+  calendar: Calendar,
+) -> Result(Change(Calendar), ShoggError(e)) {
+  let response = changed_request(client, calendar) |> client.io.send
+  use response <- result.try(response |> result.map_error(SendError))
+  parse_changed(calendar, response)
+}
+
+type CtagProp {
+  CtagProp(ctag: Option(String))
+}
+
+type CtagResponse {
+  CtagResponse(ctag: String)
+}
+
+fn ctag_decoder() {
+  use root_tag <- decode.field("$tag", decode.string)
+  use <- bool.guard(
+    when: root_tag != "multistatus",
+    return: decode.failure([], "Expected 'multistatus' as root tag"),
+  )
+  use Nil <- decode.field("$attrs", assert_ctag_namespaces_decoder())
+
+  use responses <- decode.field(
+    "response",
+    decode_xml_list(decode_ctag_response()),
+  )
+  responses |> decode.success
+}
+
+fn assert_ctag_namespaces_decoder() {
+  use xmlns <- decode.field("xmlns", decode.string)
+  use <- bool.guard(
+    when: xmlns != "DAV:" && xmlns != "",
+    return: decode.failure(Nil, "Expected DAV namespace"),
+  )
+  use xmlns_cs <- decode.field("xmlns:CS", decode.string)
+  use <- bool.guard(
+    when: xmlns_cs != "http://calendarserver.org/ns/" && xmlns_cs != "",
+    return: decode.failure(Nil, "Expected CS namespace"),
+  )
+  decode.success(Nil)
+}
+
+fn decode_ctag_response() {
+  use _href <- decode.field(
+    "href",
+    decode.field("$text", decode.string, decode.success),
+  )
+  use props <- decode.field("propstat", decode_xml_list(decode_ctag_propstat()))
+  case props |> option.values() |> list.first() {
+    Ok(CtagProp(Some(ctag))) -> CtagResponse(ctag:) |> decode.success
+    _ -> decode.failure(CtagResponse(ctag: ""), "No 200 OK ctag found")
+  }
+}
+
+fn decode_ctag_propstat() {
+  use status <- decode.field("status", decode_text())
+  use <- bool.guard(
+    when: string.contains(status, "404 Not Found"),
+    return: decode.success(None),
+  )
+  use <- bool.guard(
+    when: !string.contains(status, "200 OK"),
+    return: decode.failure(
+      None,
+      "Expected propstat status to be '200 OK'. Got '" <> status <> "'.",
+    ),
+  )
+  use prop <- decode.field("prop", {
+    use ctag <- decode.optional_field(
+      "CS:getctag",
+      None,
+      decode_text() |> decode.map(Some),
+    )
+    CtagProp(ctag:) |> decode.success
+  })
+  Some(prop) |> decode.success
 }

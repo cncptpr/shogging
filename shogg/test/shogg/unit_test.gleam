@@ -1,6 +1,7 @@
 import gleam/http/request
 import gleam/http/response
 import gleam/list
+import gleam/option.{None}
 import gleeunit
 import gleeunit/should
 import shogg/calendar
@@ -139,4 +140,46 @@ pub fn parse_discovery_response_no_location_test() {
 pub fn parse_discovery_response_non_redirect_test() {
   let response = response.Response(status: 200, headers: [], body: "OK")
   client.parse_server_info(response) |> should.be_error()
+}
+
+pub fn parse_changed_unchanged_test() {
+  let calendars_response = read_response("calendars.xml")
+  let assert Ok(calendars) = calendar.parse_calendars(calendars_response)
+  let assert Ok(cal) =
+    calendars
+    |> list.filter(fn(c) { c.name == "Personal Calendar" })
+    |> list.first()
+
+  let unchanged_response = read_response("calendar_unchanged.xml")
+  let assert Ok(calendar.Unchanged) =
+    calendar.parse_changed(cal, unchanged_response)
+}
+
+pub fn parse_changed_changed_test() {
+  let calendars_response = read_response("calendars.xml")
+  let assert Ok(calendars) = calendar.parse_calendars(calendars_response)
+  let assert Ok(cal) =
+    calendars
+    |> list.filter(fn(c) { c.name == "Personal Calendar" })
+    |> list.first()
+
+  let changed_response = read_response("calendar_changed.xml")
+  let assert Ok(calendar.Changed(new_calendar)) =
+    calendar.parse_changed(cal, changed_response)
+  new_calendar.ctag |> should.not_equal(cal.ctag)
+}
+
+pub fn parse_changed_empty_test() {
+  let body =
+    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n<multistatus xmlns=\"DAV:\">\n</multistatus>"
+  let calendar =
+    calendar.Calendar(
+      href: "/caldav/user/calendar/",
+      name: "Test",
+      ctag: "12345abc",
+      components: [],
+      color: None,
+    )
+  let resp = response.Response(status: 207, headers: [], body:)
+  calendar.parse_changed(calendar, resp) |> should.be_error()
 }

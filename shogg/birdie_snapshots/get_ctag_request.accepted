@@ -1,0 +1,18 @@
+---
+version: 1.5.4
+title: Get CTag Request
+file: ./test/shogg/snap_test.gleam
+test_name: get_ctag_request_test
+---
+> https://calendar.example/
+
+PROPFIND /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/calendars/work/
+authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
+depth: 0
+content-type: application/xml; charset=utf-8
+
+<d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/">
+      <d:prop>
+        <cs:getctag/>
+      </d:prop>
+    </d:propfind>

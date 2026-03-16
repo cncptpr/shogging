@@ -97,6 +97,13 @@ pub fn calendars_request_test() {
   |> birdie.snap(title: "Calendars Request")
 }
 
+pub fn changed_request_test() {
+  setup_client()
+  |> calendar.changed_request(test_calendar())
+  |> format_request
+  |> birdie.snap(title: "Changed Request")
+}
+
 pub fn todos_request_test() {
   setup_client()
   |> vtodo.todos_request(test_calendar())
