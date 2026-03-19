@@ -11,6 +11,7 @@ import gleam/string
 import gleam/time/duration
 import gleam/time/timestamp
 import lustre.{type App}
+import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
@@ -105,8 +106,15 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       io.println("Todos fetched!")
       #(Model(..model, todos: todos |> sort_todos), effect.none())
     }
-    ShoggSendUpdate -> {
-      #(model, effect.none())
+    ShoggSendUpdate(vtodo) -> {
+      let todos =
+        list.map(model.todos, fn(t) {
+          case t.uid == vtodo.uid {
+            True -> vtodo
+            False -> t
+          }
+        })
+      #(Model(..model, todos:), effect.none())
     }
     UserClickedReload -> {
       #(model, fetch_todos_effect(model))
@@ -140,8 +148,8 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       #(
         Model(..model, todos:),
         effect.from(fn(dispatch) {
-          let assert Ok(_href) = vtodo.send_update_todo(model.client, vtodo)
-          ShoggSendUpdate |> dispatch
+          let assert Ok(vtodo) = vtodo.send_update_todo(model.client, vtodo)
+          vtodo |> ShoggSendUpdate |> dispatch
         }),
       )
     }
@@ -159,8 +167,8 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       #(
         Model(..model, todos:),
         effect.from(fn(dispatch) {
-          let assert Ok(_href) = vtodo.send_update_todo(model.client, vtodo)
-          ShoggSendUpdate |> dispatch
+          let assert Ok(vtodo) = vtodo.send_update_todo(model.client, vtodo)
+          vtodo |> ShoggSendUpdate |> dispatch
         }),
       )
     }
@@ -170,10 +178,11 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
         model.todos |> list.filter(fn(t) { t.uid != uid }) |> sort_todos
       #(
         Model(..model, todos:),
-        effect.from(fn(dispatch) {
+        effect.from(fn(_dispatch) {
           let assert Ok(_) = vtodo.send_delete_todo(model.client, vtodo)
           // TODO: Make ShoggSendDelete message
-          ShoggSendUpdate |> dispatch
+          // ShoggSendUpdate |> dispatch
+          Nil
         }),
       )
     }
@@ -190,8 +199,8 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
   }
 }
 
-// VIEW ------------------------------------------------------------------------
-
 fn view(model: Model) -> Element(Msg) {
-  todo_list.render(model.todos)
+  html.div([attribute.attribute("x-data", "{ open: undefined }")], [
+    todo_list.render(model.todos),
+  ])
 }

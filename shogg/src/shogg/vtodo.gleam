@@ -351,18 +351,20 @@ pub fn update_todo_request(client: Client(_), vtodo: VTodo) -> Request(String) {
 pub fn send_update_todo(
   client: Client(IO(e)),
   vtodo: VTodo,
-) -> Result(Nil, ShoggError(e)) {
+) -> Result(VTodo, ShoggError(e)) {
   let response = update_todo_request(client, vtodo) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
-  parse_update_todo_response(response)
+  parse_update_todo_response(response, vtodo)
 }
 
 pub fn parse_update_todo_response(
   response: Response(String),
-) -> Result(Nil, ShoggError(e)) {
-  case response.status {
-    204 | 201 -> Ok(Nil)
-    _ ->
+  vtodo: VTodo,
+) -> Result(VTodo, ShoggError(e)) {
+  case response.status, response.get_header(response, "etag") {
+    204, Ok(etag) | 201, Ok(etag) ->
+      Ok(VTodo(..vtodo, meta: VTodoMeta(..vtodo.meta, etag:)))
+    _, _ ->
       Error(ParseError(
         "Update failed with status: " <> int.to_string(response.status),
       ))

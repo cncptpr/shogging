@@ -3,7 +3,7 @@ import shogg/vtodo
 
 pub type Msg {
   ShoggFetchedTodos(List(vtodo.VTodo))
-  ShoggSendUpdate
+  ShoggSendUpdate(vtodo.VTodo)
   ShoggDetectedChange(Calendar)
   UserAddedTodo(summary: String)
   UserCheckedTodo(uid: String, checked: Bool)

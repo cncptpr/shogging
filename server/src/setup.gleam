@@ -59,19 +59,22 @@ pub fn serve_html() -> Response(ResponseData) {
         html.script(
           [],
           "
-            console.log('asd')
+            function init_loop(host) {
+              setTimeout(
+                () => {
+                  if (host.shadowRoot)
+                    Alpine.initTree(host.shadowRoot)
+                  else
+                    init_loop(host)
+                },
+                100
+              )
+            }
+            
             document.addEventListener('alpine:init', () => {
-              console.log('asd')
               customElements.whenDefined('lustre-server-component').then(() => {
-                console.log('asd')
                 const host = document.querySelector('lustre-server-component');
-                setTimeout(()=>{
-                console.log(host.shadowRoot)
-                if (host?.shadowRoot) {
-                  console.log('asd')
-                  Alpine.initTree(host.shadowRoot);
-                }
-              }, 1000)
+                init_loop(host)
               });
             });
           ",
