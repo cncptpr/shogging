@@ -3,11 +3,13 @@ import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
 import parsed_it/xml
 import shogg.{type ShoggError, DecodeError, ParseError, SendError}
+import shogg/namespace.{DAV}
 
 pub type Client(io) {
   Client(request: Request(String), io: io)
@@ -97,7 +99,14 @@ pub fn fetch_user_info(
 ) -> Result(UserInfo, ShoggError(e)) {
   let response = user_info_request(client, server) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
-  parse_user_info(response)
+
+  case parse_user_info(response) {
+    Ok(o) -> Ok(o)
+    Error(e) -> {
+      io.println(response.body)
+      Error(e)
+    }
+  }
 }
 
 pub fn user_info_request(
@@ -139,21 +148,22 @@ type HomePropfindResponse {
 }
 
 fn user_info_decoder() {
+  use ns <- decode.then(namespace.decode_namespaces())
   decode.field(
-    "response",
+    namespace.xmlns(ns, DAV, "response"),
     decode.list({
       use href <- decode.field(
-        "href",
+        namespace.xmlns(ns, DAV, "href"),
         decode.field("$text", decode.string, decode.success),
       )
       use current_user_principal <- decode.field(
-        "propstat",
+        namespace.xmlns(ns, DAV, "propstat"),
         decode.field(
-          "prop",
+          namespace.xmlns(ns, DAV, "prop"),
           decode.field(
-            "current-user-principal",
+            namespace.xmlns(ns, DAV, "current-user-principal"),
             decode.field(
-              "href",
+              namespace.xmlns(ns, DAV, "href"),
               decode.field("$text", decode.string, decode.success),
               decode.success,
             ),

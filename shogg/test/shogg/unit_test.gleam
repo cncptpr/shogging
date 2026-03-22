@@ -18,12 +18,38 @@ fn read_response(file) {
   response.Response(status: 0, headers: [], body:)
 }
 
+fn empty_vtodo() {
+  vtodo.VTodo(
+    completed: None,
+    created: None,
+    dtstamp: "",
+    last_modified: None,
+    meta: vtodo.VTodoMeta(etag: "", href: ""),
+    other: [],
+    percent_complete: None,
+    status: None,
+    summary: None,
+    uid: "",
+    x_apple_sort_order: None,
+  )
+}
+
 pub fn parse_user_info_test() {
   let response = read_response("user_info.xml")
   let assert Ok(parsed) = client.parse_user_info(response)
 
   let user_info =
     client.UserInfo("/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/")
+
+  parsed |> should.equal(user_info)
+}
+
+pub fn parse_user_info_nextcloud_test() {
+  let response = read_response("user_info_nextcloud.xml")
+  let assert Ok(parsed) = client.parse_user_info(response)
+
+  let user_info =
+    client.UserInfo("/remote.php/dav/principals/users/[redacted]/")
 
   parsed |> should.equal(user_info)
 }
@@ -50,18 +76,24 @@ pub fn parse_todos_test() {
 }
 
 pub fn parse_update_todo_response_success_test() {
-  let response = response.Response(status: 204, headers: [], body: "")
-  let assert Ok(Nil) = vtodo.parse_update_todo_response(response)
+  let response =
+    response.Response(status: 204, headers: [#("etag", "some-etag")], body: "")
+  let assert Ok(vtodo) =
+    vtodo.parse_update_todo_response(response, empty_vtodo())
+  vtodo.meta.etag |> should.equal("some-etag")
 }
 
 pub fn parse_update_todo_response_created_test() {
-  let response = response.Response(status: 201, headers: [], body: "")
-  let assert Ok(Nil) = vtodo.parse_update_todo_response(response)
+  let response =
+    response.Response(status: 201, headers: [#("etag", "some-etag")], body: "")
+  let assert Ok(vtodo) =
+    vtodo.parse_update_todo_response(response, empty_vtodo())
+  vtodo.meta.etag |> should.equal("some-etag")
 }
 
 pub fn parse_update_todo_response_failure_test() {
   let response = response.Response(status: 400, headers: [], body: "error")
-  vtodo.parse_update_todo_response(response) |> should.be_error()
+  vtodo.parse_update_todo_response(response, empty_vtodo()) |> should.be_error()
 }
 
 pub fn parse_delete_todo_response_success_test() {

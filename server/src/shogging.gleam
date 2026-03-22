@@ -26,11 +26,12 @@ pub fn main() {
   let client =
     client.new_client(client.https, host:, username:, password:)
     |> client.set_io(hackney.send)
-  let assert Ok(server) = client.fetch_server_info(client)
-  let assert Ok(user) = client.fetch_user_info(client, server)
-  let assert Ok(calendars) = calendar.fetch_calendars(client, user)
-  let assert Ok(calendar) = calendars |> list.find(fn(c) { c.name == calendar })
-  let assert Ok(todos) = vtodo.fetch_todos(client, calendar)
+  let assert Ok(server) = client.fetch_server_info(client) |> echo
+  let assert Ok(user) = client.fetch_user_info(client, server) |> echo
+  let assert Ok(calendars) = calendar.fetch_calendars(client, user) |> echo
+  let assert Ok(calendar) =
+    calendars |> list.find(fn(c) { c.name == calendar }) |> echo
+  let assert Ok(todos) = vtodo.fetch_todos(client, calendar) |> echo
 
   let todo_list = todo_view.component()
   let assert Ok(component) =
