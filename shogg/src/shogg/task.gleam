@@ -14,6 +14,7 @@ import parsed_it/xml
 import shogg.{type ShoggError, DecodeError, ParseError, SendError}
 import shogg/calendar.{type Calendar}
 import shogg/client.{type Client, type IO}
+import shogg/namespace.{CALDAV, DAV, xmlns}
 import youid/uuid
 
 pub type TaskMeta {
@@ -116,8 +117,9 @@ pub fn parse_tasks(
 }
 
 fn tasks_responses_decoder() {
+  use ns <- decode.then(namespace.decode_namespaces())
   use root_tag <- decode.field("$tag", decode.string)
-  let expected_root_tag = "multistatus"
+  let expected_root_tag = xmlns(ns, DAV, "multistatus")
   use <- bool.guard(
     when: root_tag != expected_root_tag,
     return: decode.failure(
@@ -130,15 +132,15 @@ fn tasks_responses_decoder() {
     ),
   )
   use responses <- decode.field(
-    "response",
+    xmlns(ns, DAV, "response"),
     decode_xml_list({
       use href <- decode.field(
-        "href",
+        xmlns(ns, DAV, "href"),
         decode.field("$text", decode.string, decode.success),
       )
       use props <- decode.field(
-        "propstat",
-        decode_xml_list(decode_tasks_propstat()),
+        xmlns(ns, DAV, "propstat"),
+        decode_xml_list(decode_tasks_propstat(ns)),
       )
       case props |> option.values() |> list.first() {
         Ok(#(Some(etag), Some(data))) ->
@@ -151,8 +153,8 @@ fn tasks_responses_decoder() {
   responses |> decode.success
 }
 
-fn decode_tasks_propstat() {
-  use status <- decode.field("status", decode_text())
+fn decode_tasks_propstat(ns) {
+  use status <- decode.field(xmlns(ns, DAV, "status"), decode_text())
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
     return: decode.success(None),
@@ -164,14 +166,14 @@ fn decode_tasks_propstat() {
       "Expected propstat status to be '200 OK'. Got '" <> status <> "'.",
     ),
   )
-  use prop <- decode.field("prop", {
+  use prop <- decode.field(xmlns(ns, DAV, "prop"), {
     use etag <- decode.optional_field(
-      "getetag",
+      xmlns(ns, DAV, "getetag"),
       None,
       decode_text() |> decode.map(Some),
     )
     use calendar_data <- decode.optional_field(
-      "C:calendar-data",
+      xmlns(ns, CALDAV, "calendar-data"),
       None,
       decode_text() |> decode.map(Some),
     )

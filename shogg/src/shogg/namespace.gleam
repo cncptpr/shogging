@@ -57,15 +57,16 @@ fn set_namespace(namespaces, xmlns, prefix) {
 }
 
 pub fn xmlns(namespaces: Namespaces, xmlns, tag) {
-  let assert Some(name) = case xmlns {
+  let name = case xmlns {
     DAV -> namespaces.dav
     CALDAV -> namespaces.caldav
     CalendarServer -> namespaces.calendarserver
     Apple -> namespaces.apple
   }
   case name {
-    "" -> tag
-    _ -> name <> ":" <> tag
+    Some("") -> tag
+    Some(name) -> name <> ":" <> tag
+    None -> tag
   }
 }
 
