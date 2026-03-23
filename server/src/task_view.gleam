@@ -17,13 +17,13 @@ import lustre/element.{type Element}
 import lustre/element/html
 import shogg/calendar.{type Calendar}
 import shogg/client.{type IO}
-import shogg/vtodo.{type VTodo}
-import todo_message.{
-  type Msg, ShoggDetectedChange, ShoggFetchedTodos, ShoggSendUpdate,
-  UserAddedTodo, UserCheckedTodo, UserClickedReload, UserDeletedTodo,
-  UserRenamedTodo,
+import shogg/task.{type Task}
+import task_message.{
+  type Msg, ShoggDetectedChange, ShoggFetchedTasks, ShoggSendUpdate,
+  UserAddedTask, UserCheckedTask, UserClickedReload, UserDeletedTask,
+  UserRenamedTask,
 }
-import widgets/todo_list
+import widgets/task_list
 
 pub fn component() -> App(_, Model, Msg) {
   lustre.application(init, update, view)
@@ -32,32 +32,32 @@ pub fn component() -> App(_, Model, Msg) {
 type Client =
   client.Client(IO(hackney.Error))
 
-// TODO: Split todo into completed, and uncompleted. Hide completed
+// TODO: Split task into completed, and uncompleted. Hide completed
 pub type Model {
   Model(
     client: Client,
     calendar: Calendar,
-    todos: List(VTodo),
+    tasks: List(Task),
     check_change_delay: duration.Duration,
   )
 }
 
 fn init(data) -> #(Model, _) {
-  let #(client, calendar, todos, seconds) = data
+  let #(client, calendar, tasks, seconds) = data
   let model =
     Model(
       client:,
       calendar:,
-      todos: todos |> sort_todos,
+      tasks: tasks |> sort_tasks,
       check_change_delay: duration.seconds(seconds),
     )
   #(model, spawn_check_changed_effect(model))
 }
 
-fn fetch_todos_effect(model: Model) {
+fn fetch_tasks_effect(model: Model) {
   effect.from(fn(dispatch) {
-    let assert Ok(todos) = vtodo.fetch_todos(model.client, model.calendar)
-    todos |> ShoggFetchedTodos |> dispatch
+    let assert Ok(tasks) = task.fetch_tasks(model.client, model.calendar)
+    tasks |> ShoggFetchedTasks |> dispatch
   })
 }
 
@@ -78,8 +78,8 @@ fn spawn_check_changed_effect(model: Model) {
   Nil
 }
 
-fn sort_todos(todos: List(VTodo)) {
-  todos
+fn sort_tasks(tasks: List(Task)) {
+  tasks
   |> list.sort(fn(a, b) {
     let assert Some(a) = a.summary
     let assert Some(b) = b.summary
@@ -92,7 +92,7 @@ fn sort_todos(todos: List(VTodo)) {
     }
   })
   |> list.sort(fn(a, b) {
-    case vtodo.is_competed(a), vtodo.is_competed(b) {
+    case task.is_competed(a), task.is_competed(b) {
       True, False -> order.Gt
       False, True -> order.Lt
       _, _ -> order.Eq
@@ -102,84 +102,84 @@ fn sort_todos(todos: List(VTodo)) {
 
 fn update(model: Model, msg: Msg) -> #(Model, _) {
   case msg {
-    ShoggFetchedTodos(todos) -> {
-      io.println("Todos fetched!")
-      #(Model(..model, todos: todos |> sort_todos), effect.none())
+    ShoggFetchedTasks(tasks) -> {
+      io.println("Tasks fetched!")
+      #(Model(..model, tasks: tasks |> sort_tasks), effect.none())
     }
-    ShoggSendUpdate(vtodo) -> {
-      let todos =
-        list.map(model.todos, fn(t) {
-          case t.uid == vtodo.uid {
-            True -> vtodo
+    ShoggSendUpdate(task) -> {
+      let tasks =
+        list.map(model.tasks, fn(t) {
+          case t.uid == task.uid {
+            True -> task
             False -> t
           }
         })
-      #(Model(..model, todos:), effect.none())
+      #(Model(..model, tasks:), effect.none())
     }
     UserClickedReload -> {
-      #(model, fetch_todos_effect(model))
+      #(model, fetch_tasks_effect(model))
     }
-    UserAddedTodo(summary:) -> {
+    UserAddedTask(summary:) -> {
       let assert Ok(_href) =
-        vtodo.send_create_todo(model.client, model.calendar, summary)
+        task.send_create_task(model.client, model.calendar, summary)
       #(model, effect.none())
     }
-    UserCheckedTodo(uid:, checked:) -> {
-      let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
+    UserCheckedTask(uid:, checked:) -> {
+      let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
       // TODO: use Enum for status and timestamp for time.
-      let vtodo = case checked {
+      let task = case checked {
         True ->
-          vtodo.VTodo(
-            ..vtodo,
+          task.Task(
+            ..task,
             status: Some("COMPLETED"),
-            completed: Some(timestamp.system_time() |> vtodo.format_cal_date),
+            completed: Some(timestamp.system_time() |> task.format_cal_date),
           )
         False ->
-          vtodo.VTodo(..vtodo, status: Some("NEEDS-ACTION"), completed: None)
+          task.Task(..task, status: Some("NEEDS-ACTION"), completed: None)
       }
-      let todos =
-        list.map(model.todos, fn(t) {
+      let tasks =
+        list.map(model.tasks, fn(t) {
           case t.uid == uid {
-            True -> vtodo
+            True -> task
             False -> t
           }
         })
-        |> sort_todos
+        |> sort_tasks
       #(
-        Model(..model, todos:),
+        Model(..model, tasks:),
         effect.from(fn(dispatch) {
-          let assert Ok(vtodo) = vtodo.send_update_todo(model.client, vtodo)
-          vtodo |> ShoggSendUpdate |> dispatch
+          let assert Ok(task) = task.send_update_task(model.client, task)
+          task |> ShoggSendUpdate |> dispatch
         }),
       )
     }
-    UserRenamedTodo(uid:, summary:) -> {
-      let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
-      let vtodo = vtodo.VTodo(..vtodo, summary: Some(summary))
-      let todos =
-        list.map(model.todos, fn(t) {
+    UserRenamedTask(uid:, summary:) -> {
+      let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
+      let task = task.Task(..task, summary: Some(summary))
+      let tasks =
+        list.map(model.tasks, fn(t) {
           case t.uid == uid {
-            True -> vtodo
+            True -> task
             False -> t
           }
         })
-        |> sort_todos
+        |> sort_tasks
       #(
-        Model(..model, todos:),
+        Model(..model, tasks:),
         effect.from(fn(dispatch) {
-          let assert Ok(vtodo) = vtodo.send_update_todo(model.client, vtodo)
-          vtodo |> ShoggSendUpdate |> dispatch
+          let assert Ok(task) = task.send_update_task(model.client, task)
+          task |> ShoggSendUpdate |> dispatch
         }),
       )
     }
-    UserDeletedTodo(uid:) -> {
-      let assert Ok(vtodo) = list.find(model.todos, fn(t) { t.uid == uid })
-      let todos =
-        model.todos |> list.filter(fn(t) { t.uid != uid }) |> sort_todos
+    UserDeletedTask(uid:) -> {
+      let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
+      let tasks =
+        model.tasks |> list.filter(fn(t) { t.uid != uid }) |> sort_tasks
       #(
-        Model(..model, todos:),
+        Model(..model, tasks:),
         effect.from(fn(_dispatch) {
-          let assert Ok(_) = vtodo.send_delete_todo(model.client, vtodo)
+          let assert Ok(_) = task.send_delete_task(model.client, task)
           // TODO: Make ShoggSendDelete message
           // ShoggSendUpdate |> dispatch
           Nil
@@ -191,7 +191,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       #(
         model,
         effect.batch([
-          fetch_todos_effect(model),
+          fetch_tasks_effect(model),
           spawn_check_changed_effect(model),
         ]),
       )
@@ -201,6 +201,6 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
 
 fn view(model: Model) -> Element(Msg) {
   html.div([attribute.attribute("x-data", "{ open: undefined }")], [
-    todo_list.render(model.todos),
+    task_list.render(model.tasks),
   ])
 }

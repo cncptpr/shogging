@@ -6,7 +6,7 @@ import gleeunit
 import gleeunit/should
 import shogg/calendar
 import shogg/client
-import shogg/vtodo
+import shogg/task
 import simplifile
 
 pub fn main() {
@@ -18,13 +18,13 @@ fn read_response(file) {
   response.Response(status: 0, headers: [], body:)
 }
 
-fn empty_vtodo() {
-  vtodo.VTodo(
+fn empty_task() {
+  task.Task(
     completed: None,
     created: None,
     dtstamp: "",
     last_modified: None,
-    meta: vtodo.VTodoMeta(etag: "", href: ""),
+    meta: task.TaskMeta(etag: "", href: ""),
     other: [],
     percent_complete: None,
     status: None,
@@ -65,63 +65,61 @@ pub fn parse_calendars_test() {
   cal.ctag |> should.not_equal("")
 }
 
-pub fn parse_todos_test() {
-  let response = read_response("todos.xml")
-  let assert Ok(todos) = vtodo.parse_todos(response)
-  todos |> should.not_equal([])
+pub fn parse_tasks_test() {
+  let response = read_response("tasks.xml")
+  let assert Ok(tasks) = task.parse_tasks(response)
+  tasks |> should.not_equal([])
 
-  let assert Ok(item) = todos |> list.first()
+  let assert Ok(item) = tasks |> list.first()
   item.uid |> should.not_equal("")
   item.dtstamp |> should.not_equal("")
 }
 
-pub fn parse_update_todo_response_success_test() {
+pub fn parse_update_task_response_success_test() {
   let response =
     response.Response(status: 204, headers: [#("etag", "some-etag")], body: "")
-  let assert Ok(vtodo) =
-    vtodo.parse_update_todo_response(response, empty_vtodo())
-  vtodo.meta.etag |> should.equal("some-etag")
+  let assert Ok(task) = task.parse_update_task_response(response, empty_task())
+  task.meta.etag |> should.equal("some-etag")
 }
 
-pub fn parse_update_todo_response_created_test() {
+pub fn parse_update_task_response_created_test() {
   let response =
     response.Response(status: 201, headers: [#("etag", "some-etag")], body: "")
-  let assert Ok(vtodo) =
-    vtodo.parse_update_todo_response(response, empty_vtodo())
-  vtodo.meta.etag |> should.equal("some-etag")
+  let assert Ok(task) = task.parse_update_task_response(response, empty_task())
+  task.meta.etag |> should.equal("some-etag")
 }
 
-pub fn parse_update_todo_response_failure_test() {
+pub fn parse_update_task_response_failure_test() {
   let response = response.Response(status: 400, headers: [], body: "error")
-  vtodo.parse_update_todo_response(response, empty_vtodo()) |> should.be_error()
+  task.parse_update_task_response(response, empty_task()) |> should.be_error()
 }
 
-pub fn parse_delete_todo_response_success_test() {
+pub fn parse_delete_task_response_success_test() {
   let response = response.Response(status: 204, headers: [], body: "")
-  let assert Ok(Nil) = vtodo.parse_delete_todo_response(response)
+  let assert Ok(Nil) = task.parse_delete_task_response(response)
 }
 
-pub fn parse_delete_todo_response_ok_test() {
+pub fn parse_delete_task_response_ok_test() {
   let response = response.Response(status: 200, headers: [], body: "")
-  let assert Ok(Nil) = vtodo.parse_delete_todo_response(response)
+  let assert Ok(Nil) = task.parse_delete_task_response(response)
 }
 
-pub fn parse_delete_todo_response_failure_test() {
+pub fn parse_delete_task_response_failure_test() {
   let response = response.Response(status: 400, headers: [], body: "error")
-  vtodo.parse_delete_todo_response(response) |> should.be_error()
+  task.parse_delete_task_response(response) |> should.be_error()
 }
 
-pub fn parse_create_todo_response_success_test() {
+pub fn parse_create_task_response_success_test() {
   let req = request.new() |> request.set_path("/test/path.ics")
   let response = response.Response(status: 201, headers: [], body: "")
-  let assert Ok(path) = vtodo.parse_create_todo(response, req)
+  let assert Ok(path) = task.parse_create_task(response, req)
   path |> should.equal("/test/path.ics")
 }
 
-pub fn parse_create_todo_response_failure_test() {
+pub fn parse_create_task_response_failure_test() {
   let req = request.new() |> request.set_path("/test/path.ics")
   let response = response.Response(status: 400, headers: [], body: "error")
-  vtodo.parse_create_todo(response, req) |> should.be_error()
+  task.parse_create_task(response, req) |> should.be_error()
 }
 
 pub fn parse_discovery_response_301_test() {

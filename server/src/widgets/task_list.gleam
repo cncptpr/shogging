@@ -3,16 +3,16 @@ import lustre/attribute.{styles}
 import lustre/element/html
 import lustre/element/keyed
 import lustre/event
-import shogg/vtodo
+import shogg/task
 import styles.{f, flex, vcenter}
-import todo_message.{UserClickedReload}
-import widgets/todo_card
+import task_message.{UserClickedReload}
+import widgets/task_card
 
-pub fn render(todos: List(vtodo.VTodo)) {
+pub fn render(tasks: List(task.Task)) {
   let submitted = fn(fields) {
     let assert Ok(#(_, summary)) =
       list.find(fields, fn(f: #(String, String)) { f.0 == "summary" })
-    summary |> todo_message.UserAddedTodo
+    summary |> task_message.UserAddedTask
   }
 
   html.main([attribute.class("container")], [
@@ -31,7 +31,7 @@ pub fn render(todos: List(vtodo.VTodo)) {
       html.fieldset([attribute.role("group")], [
         html.input([
           attribute.name("summary"),
-          attribute.placeholder("Add a new todo"),
+          attribute.placeholder("Add a new task"),
           attribute.type_("text"),
         ]),
         html.button([attribute.type_("submit")], [html.text("Add")]),
@@ -39,7 +39,7 @@ pub fn render(todos: List(vtodo.VTodo)) {
     ]),
     keyed.div(
       [],
-      list.map(todos, fn(item) { #(item.uid, todo_card.render(item)) }),
+      list.map(tasks, fn(item) { #(item.uid, task_card.render(item)) }),
     ),
   ])
 }

@@ -14,7 +14,7 @@ import lustre/element
 import lustre/element/html.{html}
 import lustre/server_component
 import mist.{type Connection, type ResponseData}
-import todo_message
+import task_message
 
 // HTML ------------------------------------------------------------------------
 
@@ -125,13 +125,13 @@ pub fn serve_component(
 
 type ComponentSocket {
   ComponentSocket(
-    component: lustre.Runtime(todo_message.Msg),
-    self: Subject(server_component.ClientMessage(todo_message.Msg)),
+    component: lustre.Runtime(task_message.Msg),
+    self: Subject(server_component.ClientMessage(task_message.Msg)),
   )
 }
 
 type ComponentSocketMessage =
-  server_component.ClientMessage(todo_message.Msg)
+  server_component.ClientMessage(task_message.Msg)
 
 type ComponentSocketInit =
   #(ComponentSocket, Option(Selector(ComponentSocketMessage)))

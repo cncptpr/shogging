@@ -13,8 +13,8 @@ Shogg implements Apple's ctag extension for calendar synchronization. This is th
 
 ### Sync Flow
 
-1. **First sync**: Use `fetch_calendars` to get calendars with their ctags, then use `fetch_todos` to get all items
-2. **Subsequent syncs**: Check if the ctag has changed, only re-fetch todos if it did
+1. **First sync**: Use `fetch_calendars` to get calendars with their ctags, then use `fetch_tasks` to get all items
+2. **Subsequent syncs**: Check if the ctag has changed, only re-fetch tasks if it did
 
 ### API
 
@@ -31,9 +31,9 @@ let assert Ok(current_ctag) = calendar.get_ctag_request(client, calendar)
   |> result.map(calendar.parse_ctag_response)
 let changed = current_ctag != calendar.ctag
 
-// If changed, re-fetch todos
+// If changed, re-fetch tasks
 if changed {
-  let assert Ok(todos) = vtodo.fetch_todos(client, calendar)
+  let assert Ok(tasks) = task.fetch_tasks(client, calendar)
   // Update local store
 }
 ```

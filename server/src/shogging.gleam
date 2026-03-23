@@ -12,8 +12,8 @@ import mist.{type Connection, type ResponseData}
 import setup
 import shogg/calendar
 import shogg/client
-import shogg/vtodo
-import todo_view
+import shogg/task
+import task_view
 
 pub fn main() {
   let assert Ok(host) = envoy.get("CALDAV_HOST")
@@ -26,16 +26,14 @@ pub fn main() {
   let client =
     client.new_client(client.https, host:, username:, password:)
     |> client.set_io(hackney.send)
-  let assert Ok(server) = client.fetch_server_info(client) |> echo
-  let assert Ok(user) = client.fetch_user_info(client, server) |> echo
-  let assert Ok(calendars) = calendar.fetch_calendars(client, user) |> echo
-  let assert Ok(calendar) =
-    calendars |> list.find(fn(c) { c.name == calendar }) |> echo
-  let assert Ok(todos) = vtodo.fetch_todos(client, calendar) |> echo
-
-  let todo_list = todo_view.component()
+  let assert Ok(server) = client.fetch_server_info(client)
+  let assert Ok(user) = client.fetch_user_info(client, server)
+  let assert Ok(calendars) = calendar.fetch_calendars(client, user)
+  let assert Ok(calendar) = calendars |> list.find(fn(c) { c.name == calendar })
+  let assert Ok(tasks) = task.fetch_tasks(client, calendar)
+  let task_list = task_view.component()
   let assert Ok(component) =
-    lustre.start_server_component(todo_list, #(client, calendar, todos, delay))
+    lustre.start_server_component(task_list, #(client, calendar, tasks, delay))
 
   let assert Ok(_) =
     fn(request: Request(Connection)) -> Response(ResponseData) {

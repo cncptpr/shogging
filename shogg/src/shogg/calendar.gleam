@@ -15,7 +15,7 @@ import shogg/client.{type Client, type IO, type UserInfo}
 pub type VComponent {
   VEvent
   VJournal
-  VTodo
+  VTask
 }
 
 pub type Calendar {
@@ -173,7 +173,7 @@ fn decode_calendars_propstat() {
           decode.field("name", decode.string, decode.success)
             |> decode.map(fn(name) {
               case name {
-                "VTODO" -> VTodo
+                "VTODO" -> VTask
                 "VEVENT" -> VEvent
                 "VJOURNAL" -> VJournal
                 _ -> panic as "Unknown component"

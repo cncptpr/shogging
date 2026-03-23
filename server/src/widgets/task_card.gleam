@@ -3,18 +3,18 @@ import gleam/option.{Some}
 import lustre/attribute.{attribute, styles}
 import lustre/element/html
 import lustre/event
-import shogg/vtodo
+import shogg/task
 import styles.{f, flex, invert, vcenter, width}
-import todo_message.{UserCheckedTodo}
+import task_message.{UserCheckedTask}
 
-pub fn render(item: vtodo.VTodo) {
+pub fn render(item: task.Task) {
   let submitted = fn(fields) {
     let assert Ok(#(_, summary)) =
       list.find(fields, fn(f: #(String, String)) { f.0 == "name" })
-    summary |> todo_message.UserRenamedTodo(item.uid, _)
+    summary |> task_message.UserRenamedTask(item.uid, _)
   }
 
-  let completed = vtodo.is_competed(item)
+  let completed = task.is_competed(item)
   let assert Some(summary) = item.summary
   let popover_id = "rename-prompt-" <> item.uid
   html.div([], [
@@ -31,7 +31,7 @@ pub fn render(item: vtodo.VTodo) {
         html.input([
           attribute.type_("checkbox"),
           attribute.checked(completed),
-          event.on_check(UserCheckedTodo(item.uid, _)),
+          event.on_check(UserCheckedTask(item.uid, _)),
         ]),
         html.span([styles([f(1)])], [
           case completed {
@@ -58,7 +58,7 @@ pub fn render(item: vtodo.VTodo) {
         html.button(
           [
             attribute.class("outline"),
-            event.on_click(todo_message.UserDeletedTodo(item.uid)),
+            event.on_click(task_message.UserDeletedTask(item.uid)),
           ],
           [
             html.img([

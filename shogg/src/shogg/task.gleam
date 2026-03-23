@@ -16,12 +16,12 @@ import shogg/calendar.{type Calendar}
 import shogg/client.{type Client, type IO}
 import youid/uuid
 
-pub type VTodoMeta {
-  VTodoMeta(href: String, etag: String)
+pub type TaskMeta {
+  TaskMeta(href: String, etag: String)
 }
 
-pub type VTodo {
-  VTodo(
+pub type Task {
+  Task(
     uid: String,
     dtstamp: String,
     created: Option(String),
@@ -32,7 +32,7 @@ pub type VTodo {
     percent_complete: Option(Int),
     x_apple_sort_order: Option(Int),
     other: List(#(String, String)),
-    meta: VTodoMeta,
+    meta: TaskMeta,
   )
 }
 
@@ -64,15 +64,15 @@ pub fn format_cal_date(now: Timestamp) {
   <> "Z"
 }
 
-pub fn is_competed(vtodo) {
-  case vtodo {
-    VTodo(status: Some("COMPLETED"), ..) -> True
-    VTodo(status: None, completed: Some(_), ..) -> True
+pub fn is_competed(task) {
+  case task {
+    Task(status: Some("COMPLETED"), ..) -> True
+    Task(status: None, completed: Some(_), ..) -> True
     _ -> False
   }
 }
 
-pub fn todos_request(client: Client(_), calendar: Calendar) -> Request(String) {
+pub fn tasks_request(client: Client(_), calendar: Calendar) -> Request(String) {
   let request_body =
     "<c:calendar-query xmlns:d=\"DAV:\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\">
       <d:prop>
@@ -94,20 +94,20 @@ pub fn todos_request(client: Client(_), calendar: Calendar) -> Request(String) {
   |> request.set_header("Content-Type", "application/xml; charset=utf-8")
 }
 
-pub fn fetch_todos(
+pub fn fetch_tasks(
   client: Client(IO(e)),
   calendar: Calendar,
-) -> Result(List(VTodo), ShoggError(e)) {
-  let response = todos_request(client, calendar) |> client.io.send
+) -> Result(List(Task), ShoggError(e)) {
+  let response = tasks_request(client, calendar) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
-  parse_todos(response)
+  parse_tasks(response)
 }
 
-pub fn parse_todos(
+pub fn parse_tasks(
   response: Response(String),
-) -> Result(List(VTodo), ShoggError(e)) {
+) -> Result(List(Task), ShoggError(e)) {
   use parsed <- result.try(
-    xml.parse(response.body, get_todo_responses_decoder())
+    xml.parse(response.body, tasks_responses_decoder())
     |> result.map_error(DecodeError),
   )
   parsed
@@ -115,7 +115,7 @@ pub fn parse_todos(
   |> Ok
 }
 
-fn get_todo_responses_decoder() {
+fn tasks_responses_decoder() {
   use root_tag <- decode.field("$tag", decode.string)
   let expected_root_tag = "multistatus"
   use <- bool.guard(
@@ -138,21 +138,20 @@ fn get_todo_responses_decoder() {
       )
       use props <- decode.field(
         "propstat",
-        decode_xml_list(decode_get_todo_propstat()),
+        decode_xml_list(decode_tasks_propstat()),
       )
       case props |> option.values() |> list.first() {
         Ok(#(Some(etag), Some(data))) ->
-          #(VTodoMeta(href:, etag:), data)
+          #(TaskMeta(href:, etag:), data)
           |> decode.success
-        _ ->
-          decode.failure(#(VTodoMeta("", ""), ""), "No 200 OK propstat found")
+        _ -> decode.failure(#(TaskMeta("", ""), ""), "No 200 OK propstat found")
       }
     }),
   )
   responses |> decode.success
 }
 
-fn decode_get_todo_propstat() {
+fn decode_tasks_propstat() {
   use status <- decode.field("status", decode_text())
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
@@ -181,7 +180,7 @@ fn decode_get_todo_propstat() {
   Some(prop) |> decode.success
 }
 
-pub fn parse_ical(t: #(VTodoMeta, String)) -> Result(VTodo, String) {
+pub fn parse_ical(t: #(TaskMeta, String)) -> Result(Task, String) {
   let #(meta, data) = t
   let lines =
     data
@@ -192,19 +191,19 @@ pub fn parse_ical(t: #(VTodoMeta, String)) -> Result(VTodo, String) {
   // TODO: Refactor entire ical parser
   case list.filter(lines, fn(l) { string.starts_with(l, "BEGIN:") }) {
     ["BEGIN:VCALENDAR", "BEGIN:VTODO", ..] -> {
-      let vtodo_lines = lines |> list.drop_while(fn(l) { l != "BEGIN:VTODO" })
-      let vtodo_content = find_vtodo_content(vtodo_lines, 0)
-      parse_vtodo(vtodo_content, VTodo(..empty_todo(), meta:))
+      let task_lines = lines |> list.drop_while(fn(l) { l != "BEGIN:VTODO" })
+      let task_content = find_task_content(task_lines, 0)
+      parse_task(task_content, Task(..empty_task(), meta:))
     }
     _ -> Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
   }
 }
 
-fn find_vtodo_content(lines: List(String), idx: Int) -> List(String) {
+fn find_task_content(lines: List(String), idx: Int) -> List(String) {
   case lines {
     [] -> []
     ["END:VTODO", ..] -> ["END:VTODO"]
-    [line, ..rest] -> [line, ..find_vtodo_content(rest, idx + 1)]
+    [line, ..rest] -> [line, ..find_task_content(rest, idx + 1)]
   }
 }
 
@@ -215,8 +214,8 @@ fn parse_ical_field(line: String) -> #(String, String) {
   }
 }
 
-fn empty_todo() {
-  VTodo(
+fn empty_task() {
+  Task(
     uid: "",
     dtstamp: "",
     created: None,
@@ -227,43 +226,43 @@ fn empty_todo() {
     percent_complete: None,
     x_apple_sort_order: None,
     other: [],
-    meta: VTodoMeta("", ""),
+    meta: TaskMeta("", ""),
   )
 }
 
-fn parse_vtodo(lines: List(String), parsed: VTodo) -> Result(VTodo, String) {
+fn parse_task(lines: List(String), parsed: Task) -> Result(Task, String) {
   case lines {
     [] -> Error("Empty VTODO")
     ["END:VTODO"] -> Ok(parsed)
     ["END:VTODO", ..] -> Error("Extra content after END:VTODO")
     [line, ..rest] -> {
-      use new_parsed <- result.try(parse_vtodo(rest, parsed))
+      use new_parsed <- result.try(parse_task(rest, parsed))
       case parse_ical_field(line) {
         #("VERSION", _) -> {
           let assert "2.0" = line |> string.replace("VERSION:", "")
           Ok(new_parsed)
         }
-        #("UID", value) -> Ok(VTodo(..new_parsed, uid: value))
-        #("DTSTAMP", value) -> Ok(VTodo(..new_parsed, dtstamp: value))
-        #("CREATED", value) -> Ok(VTodo(..new_parsed, created: Some(value)))
+        #("UID", value) -> Ok(Task(..new_parsed, uid: value))
+        #("DTSTAMP", value) -> Ok(Task(..new_parsed, dtstamp: value))
+        #("CREATED", value) -> Ok(Task(..new_parsed, created: Some(value)))
         #("LAST-MODIFIED", value) ->
-          Ok(VTodo(..new_parsed, last_modified: Some(value)))
-        #("STATUS", value) -> Ok(VTodo(..new_parsed, status: Some(value)))
+          Ok(Task(..new_parsed, last_modified: Some(value)))
+        #("STATUS", value) -> Ok(Task(..new_parsed, status: Some(value)))
         #("SUMMARY", value) ->
-          Ok(VTodo(..new_parsed, summary: Some(value |> remove_escape)))
-        #("COMPLETED", value) -> Ok(VTodo(..new_parsed, completed: Some(value)))
+          Ok(Task(..new_parsed, summary: Some(value |> remove_escape)))
+        #("COMPLETED", value) -> Ok(Task(..new_parsed, completed: Some(value)))
         #("PERCENT-COMPLETE", value) ->
           case int.parse(value) {
-            Ok(i) -> Ok(VTodo(..new_parsed, percent_complete: Some(i)))
+            Ok(i) -> Ok(Task(..new_parsed, percent_complete: Some(i)))
             Error(_) -> Error("Invalid PERCENT-COMPLETE: " <> value)
           }
         #("X-APPLE-SORT-ORDER", value) ->
           case int.parse(value) {
-            Ok(i) -> Ok(VTodo(..new_parsed, x_apple_sort_order: Some(i)))
+            Ok(i) -> Ok(Task(..new_parsed, x_apple_sort_order: Some(i)))
             Error(_) -> Error("Invalid X-APPLE-SORT-ORDER: " <> value)
           }
         #(key, value) ->
-          Ok(VTodo(..new_parsed, other: [#(key, value), ..new_parsed.other]))
+          Ok(Task(..new_parsed, other: [#(key, value), ..new_parsed.other]))
       }
     }
   }
@@ -287,7 +286,7 @@ fn escape(text) {
   })
 }
 
-pub fn serialize_vtodo(parsed: VTodo) -> String {
+pub fn serialize_task(parsed: Task) -> String {
   let base =
     "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Shogg//EN\r\nBEGIN:VTODO\r\n"
   let base = base <> "UID:" <> parsed.uid <> "\r\n"
@@ -337,33 +336,33 @@ pub fn serialize_vtodo(parsed: VTodo) -> String {
   base <> "END:VTODO\r\nEND:VCALENDAR\r\n"
 }
 
-pub fn update_todo_request(client: Client(_), vtodo: VTodo) -> Request(String) {
+pub fn update_task_request(client: Client(_), task: Task) -> Request(String) {
   // TODO: update updated_last
-  let body = serialize_vtodo(vtodo)
+  let body = serialize_task(task)
   client.request
-  |> request.set_path(vtodo.meta.href)
+  |> request.set_path(task.meta.href)
   |> request.set_method(http.Put)
   |> request.set_body(body)
   |> request.set_header("Content-Type", "text/calendar; charset=utf-8")
-  |> request.set_header("If-Match", vtodo.meta.etag)
+  |> request.set_header("If-Match", task.meta.etag)
 }
 
-pub fn send_update_todo(
+pub fn send_update_task(
   client: Client(IO(e)),
-  vtodo: VTodo,
-) -> Result(VTodo, ShoggError(e)) {
-  let response = update_todo_request(client, vtodo) |> client.io.send
+  task: Task,
+) -> Result(Task, ShoggError(e)) {
+  let response = update_task_request(client, task) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
-  parse_update_todo_response(response, vtodo)
+  parse_update_task_response(response, task)
 }
 
-pub fn parse_update_todo_response(
+pub fn parse_update_task_response(
   response: Response(String),
-  vtodo: VTodo,
-) -> Result(VTodo, ShoggError(e)) {
+  task: Task,
+) -> Result(Task, ShoggError(e)) {
   case response.status, response.get_header(response, "etag") {
     204, Ok(etag) | 201, Ok(etag) ->
-      Ok(VTodo(..vtodo, meta: VTodoMeta(..vtodo.meta, etag:)))
+      Ok(Task(..task, meta: TaskMeta(..task.meta, etag:)))
     _, _ ->
       Error(ParseError(
         "Update failed with status: " <> int.to_string(response.status),
@@ -371,7 +370,7 @@ pub fn parse_update_todo_response(
   }
 }
 
-pub fn create_todo_request_with(
+pub fn create_task_request_with(
   client: Client(_),
   calendar: Calendar,
   summary: String,
@@ -399,12 +398,12 @@ pub fn create_todo_request_with(
   |> request.set_header("If-None-Match", "*")
 }
 
-pub fn create_todo_request(
+pub fn create_task_request(
   client: Client(_),
   calendar: Calendar,
   summary: String,
 ) -> Request(String) {
-  create_todo_request_with(
+  create_task_request_with(
     client,
     calendar,
     summary,
@@ -413,34 +412,34 @@ pub fn create_todo_request(
   )
 }
 
-pub fn send_create_todo(
+pub fn send_create_task(
   client: Client(IO(e)),
   calendar: Calendar,
   summary: String,
 ) -> Result(String, ShoggError(e)) {
-  let request = create_todo_request(client, calendar, summary)
+  let request = create_task_request(client, calendar, summary)
   let response = client.io.send(request)
   use response <- result.try(response |> result.map_error(SendError))
-  parse_create_todo(response, request)
+  parse_create_task(response, request)
 }
 
-pub fn delete_todo_request(client: Client(_), vtodo: VTodo) -> Request(String) {
+pub fn delete_task_request(client: Client(_), task: Task) -> Request(String) {
   client.request
-  |> request.set_path(vtodo.meta.href)
+  |> request.set_path(task.meta.href)
   |> request.set_method(http.Delete)
-  |> request.set_header("If-Match", vtodo.meta.etag)
+  |> request.set_header("If-Match", task.meta.etag)
 }
 
-pub fn send_delete_todo(
+pub fn send_delete_task(
   client: Client(IO(e)),
-  vtodo: VTodo,
+  task: Task,
 ) -> Result(Nil, ShoggError(e)) {
-  let response = delete_todo_request(client, vtodo) |> client.io.send
+  let response = delete_task_request(client, task) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
-  parse_delete_todo_response(response)
+  parse_delete_task_response(response)
 }
 
-pub fn parse_delete_todo_response(
+pub fn parse_delete_task_response(
   response: Response(String),
 ) -> Result(Nil, ShoggError(e)) {
   case response.status {
@@ -452,7 +451,7 @@ pub fn parse_delete_todo_response(
   }
 }
 
-pub fn parse_create_todo(
+pub fn parse_create_task(
   response: Response(String),
   request: Request(String),
 ) -> Result(String, ShoggError(e)) {
