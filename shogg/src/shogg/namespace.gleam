@@ -1,28 +1,17 @@
 import gleam/dict
+import gleam/dynamic.{
+  type Dynamic, classify, list as dyn_list, properties, string,
+}
 import gleam/dynamic/decode
-import gleam/option.{type Option, None, Some}
+import gleam/list
+import gleam/string
 
 pub type Xmlns {
-  /// Base Protocol: General Recource Tags
   DAV
-  /// Calendar Extention: Calendar, Event & Task Specific Tags
   CALDAV
-  /// Sync Extention: etag & ctag
   CalendarServer
-  /// Apple UX Extentions: Calendar Color
   Apple
 }
-
-pub type Namespaces {
-  Namespaces(
-    dav: Option(String),
-    caldav: Option(String),
-    calendarserver: Option(String),
-    apple: Option(String),
-  )
-}
-
-const empty_ns = Namespaces(None, None, None, None)
 
 pub fn to_string(ns) {
   case ns {
@@ -33,61 +22,34 @@ pub fn to_string(ns) {
   }
 }
 
-pub type UnknownNamespace {
-  UnknownNamespace(String)
-}
-
-pub fn from_string(ns) {
-  case ns {
-    "DAV:" -> Ok(DAV)
-    "urn:ietf:params:xml:ns:caldav" -> Ok(CALDAV)
-    "http://calendarserver.org/ns/" -> Ok(CalendarServer)
-    "http://apple.com/ns:ical/" -> Ok(Apple)
-    _ -> Error(UnknownNamespace(ns))
+fn strip_key(key: String) -> String {
+  case string.split_once(key, ":") {
+    Ok(#(_, suffix)) -> suffix
+    Error(_) -> key
   }
 }
 
-fn set_namespace(namespaces, xmlns, prefix) {
-  case xmlns {
-    DAV -> Namespaces(..namespaces, dav: Some(prefix))
-    CALDAV -> Namespaces(..namespaces, caldav: Some(prefix))
-    CalendarServer -> Namespaces(..namespaces, calendarserver: Some(prefix))
-    Apple -> Namespaces(..namespaces, apple: Some(prefix))
-  }
-}
-
-pub fn xmlns(namespaces: Namespaces, xmlns, tag) {
-  let name = case xmlns {
-    DAV -> namespaces.dav
-    CALDAV -> namespaces.caldav
-    CalendarServer -> namespaces.calendarserver
-    Apple -> namespaces.apple
-  }
-  case name {
-    Some("") -> tag
-    Some(name) -> name <> ":" <> tag
-    None -> tag
-  }
-}
-
-pub fn decode_namespaces() {
-  decode.optional_field(
-    "$attrs",
-    empty_ns,
-    {
-      use dict <- decode.then(decode.dict(decode.string, decode.string))
-      dict.fold(dict, empty_ns, fn(namespaces, name, full_name) {
-        let xmlns = from_string(full_name)
-        case xmlns, name {
-          Error(UnknownNamespace(_)), _ -> namespaces
-          Ok(xmlns), "xmlns" -> set_namespace(namespaces, xmlns, "")
-          Ok(xmlns), "xmlns:" <> prefix ->
-            set_namespace(namespaces, xmlns, prefix)
-          Ok(_), _ -> namespaces
+pub fn strip_dynamic(d: Dynamic) -> Dynamic {
+  case classify(d) {
+    "Dict" -> {
+      case decode.run(d, decode.dict(decode.string, decode.dynamic)) {
+        Ok(dict) -> {
+          dict.to_list(dict)
+          |> list.map(fn(entry) {
+            let #(key, value) = entry
+            #(string(strip_key(key)), strip_dynamic(value))
+          })
+          |> properties()
         }
-      })
-      |> decode.success
-    },
-    decode.success,
-  )
+        Error(_) -> d
+      }
+    }
+    "List" -> {
+      case decode.run(d, decode.list(decode.dynamic)) {
+        Ok(items) -> dyn_list(list.map(items, strip_dynamic))
+        Error(_) -> d
+      }
+    }
+    _ -> d
+  }
 }

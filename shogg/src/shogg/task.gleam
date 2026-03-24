@@ -11,10 +11,10 @@ import gleam/string
 import gleam/time/calendar as dt
 import gleam/time/timestamp.{type Timestamp}
 import parsed_it/xml
-import shogg.{type ShoggError, DecodeError, ParseError, SendError}
+import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
 import shogg/calendar.{type Calendar}
 import shogg/client.{type Client, type IO}
-import shogg/namespace.{CALDAV, DAV, xmlns}
+import shogg/namespace
 import youid/uuid
 
 pub type TaskMeta {
@@ -107,9 +107,14 @@ pub fn fetch_tasks(
 pub fn parse_tasks(
   response: Response(String),
 ) -> Result(List(Task), ShoggError(e)) {
+  use dyn <- result.try(
+    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  )
+  let stripped = namespace.strip_dynamic(dyn)
   use parsed <- result.try(
-    xml.parse(response.body, tasks_responses_decoder())
-    |> result.map_error(DecodeError),
+    decode.run(stripped, tasks_responses_decoder())
+    |> result.map_error(xml.UnableToDecode)
+    |> result.map_error(XmlDecodeError),
   )
   parsed
   |> list.filter_map(fn(t) { parse_ical(t) })
@@ -117,30 +122,24 @@ pub fn parse_tasks(
 }
 
 fn tasks_responses_decoder() {
-  use ns <- decode.then(namespace.decode_namespaces())
   use root_tag <- decode.field("$tag", decode.string)
-  let expected_root_tag = xmlns(ns, DAV, "multistatus")
   use <- bool.guard(
-    when: root_tag != expected_root_tag,
+    when: root_tag != "multistatus",
     return: decode.failure(
       [],
-      "Expected '"
-        <> expected_root_tag
-        <> "' as the root tag, found '"
-        <> root_tag
-        <> "'.",
+      "Expected 'multistatus' as the root tag, found '" <> root_tag <> "'.",
     ),
   )
   use responses <- decode.field(
-    xmlns(ns, DAV, "response"),
+    "response",
     decode_xml_list({
       use href <- decode.field(
-        xmlns(ns, DAV, "href"),
+        "href",
         decode.field("$text", decode.string, decode.success),
       )
       use props <- decode.field(
-        xmlns(ns, DAV, "propstat"),
-        decode_xml_list(decode_tasks_propstat(ns)),
+        "propstat",
+        decode_xml_list(decode_tasks_propstat()),
       )
       case props |> option.values() |> list.first() {
         Ok(#(Some(etag), Some(data))) ->
@@ -153,8 +152,8 @@ fn tasks_responses_decoder() {
   responses |> decode.success
 }
 
-fn decode_tasks_propstat(ns) {
-  use status <- decode.field(xmlns(ns, DAV, "status"), decode_text())
+fn decode_tasks_propstat() {
+  use status <- decode.field("status", decode_text())
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
     return: decode.success(None),
@@ -166,14 +165,14 @@ fn decode_tasks_propstat(ns) {
       "Expected propstat status to be '200 OK'. Got '" <> status <> "'.",
     ),
   )
-  use prop <- decode.field(xmlns(ns, DAV, "prop"), {
+  use prop <- decode.field("prop", {
     use etag <- decode.optional_field(
-      xmlns(ns, DAV, "getetag"),
+      "getetag",
       None,
       decode_text() |> decode.map(Some),
     )
     use calendar_data <- decode.optional_field(
-      xmlns(ns, CALDAV, "calendar-data"),
+      "calendar-data",
       None,
       decode_text() |> decode.map(Some),
     )

@@ -60,6 +60,20 @@ pub fn parse_calendars_test() {
   calendars |> list.length |> should.equal(3)
 
   let assert Ok(cal) = calendars |> list.first()
+  // TODO: Assert exact field outputs
+  cal.name |> should.not_equal("")
+  cal.href |> should.not_equal("")
+  cal.ctag |> should.not_equal("")
+}
+
+pub fn parse_calendars_nextcloud_test() {
+  let response = read_response("calendars_nextcloud.xml")
+  let assert Ok(calendars) = calendar.parse_calendars(response)
+  // TODO: Update to correct amount
+  calendars |> list.length |> should.equal(3)
+
+  let assert Ok(cal) = calendars |> list.first()
+  // TODO: Assert exact field outputs
   cal.name |> should.not_equal("")
   cal.href |> should.not_equal("")
   cal.ctag |> should.not_equal("")

@@ -8,8 +8,8 @@ import gleam/list
 import gleam/result
 import gleam/string
 import parsed_it/xml
-import shogg.{type ShoggError, DecodeError, ParseError, SendError}
-import shogg/namespace.{DAV}
+import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
+import shogg/namespace
 
 pub type Client(io) {
   Client(request: Request(String), io: io)
@@ -127,9 +127,15 @@ pub fn user_info_request(
 pub fn parse_user_info(
   response: Response(String),
 ) -> Result(UserInfo, ShoggError(e)) {
+  use dyn <- result.try(
+    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  )
+  let stripped = namespace.strip_dynamic(dyn)
+
   use parsed <- result.try(
-    xml.parse(response.body, user_info_decoder())
-    |> result.map_error(DecodeError),
+    decode.run(stripped, user_info_decoder())
+    |> result.map_error(xml.UnableToDecode)
+    |> result.map_error(XmlDecodeError),
   )
   case parsed {
     [] -> Error(ParseError("No responses found"))
@@ -148,22 +154,21 @@ type HomePropfindResponse {
 }
 
 fn user_info_decoder() {
-  use ns <- decode.then(namespace.decode_namespaces())
   decode.field(
-    namespace.xmlns(ns, DAV, "response"),
+    "response",
     decode.list({
       use href <- decode.field(
-        namespace.xmlns(ns, DAV, "href"),
+        "href",
         decode.field("$text", decode.string, decode.success),
       )
       use current_user_principal <- decode.field(
-        namespace.xmlns(ns, DAV, "propstat"),
+        "propstat",
         decode.field(
-          namespace.xmlns(ns, DAV, "prop"),
+          "prop",
           decode.field(
-            namespace.xmlns(ns, DAV, "current-user-principal"),
+            "current-user-principal",
             decode.field(
-              namespace.xmlns(ns, DAV, "href"),
+              "href",
               decode.field("$text", decode.string, decode.success),
               decode.success,
             ),
@@ -172,7 +177,8 @@ fn user_info_decoder() {
           decode.success,
         ),
       )
-      HomePropfindResponse(href:, current_user_principal:) |> decode.success()
+      HomePropfindResponse(href:, current_user_principal:)
+      |> decode.success()
     }),
     decode.success,
   )

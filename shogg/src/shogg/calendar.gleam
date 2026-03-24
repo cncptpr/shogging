@@ -10,9 +10,9 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import parsed_it/xml
-import shogg.{type ShoggError, DecodeError, ParseError, SendError}
+import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
 import shogg/client.{type Client, type IO, type UserInfo}
-import shogg/namespace.{Apple, CALDAV, CalendarServer, DAV, xmlns}
+import shogg/namespace
 
 pub type VComponent {
   VEvent
@@ -71,10 +71,15 @@ pub fn calendars_request(
 pub fn parse_calendars(
   response: Response(String),
 ) -> Result(List(Calendar), ShoggError(e)) {
-  io.println(response.body)
+  use dyn <- result.try(
+    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  )
+  let stripped = dyn |> namespace.strip_dynamic
   use parsed <- result.try(
-    xml.parse(response.body, calendars_responses_decoder())
-    |> result.map_error(DecodeError),
+    decode.run(stripped, calendars_responses_decoder())
+    // TODO: are these the correct errors?
+    |> result.map_error(xml.UnableToDecode)
+    |> result.map_error(XmlDecodeError),
   )
   Ok(responses_to_calendar(parsed))
 }
@@ -115,40 +120,24 @@ fn decode_xml_list(element decoder) {
   ])
 }
 
-fn decode_resource_type_tag(ns, tag) {
+fn decode_resource_type_tag(tag) {
   case tag {
     "$tag" -> Error(Nil)
     "$text" | "$attr" -> panic as "Unexpected tag"
     _ -> {
-      let expected = xmlns(ns, DAV, "addressbook")
-      case tag == expected {
-        True -> Ok(CardDAVAdressbook)
-        False -> {
-          let expected = xmlns(ns, DAV, "collection")
-          case tag == expected {
-            True -> Ok(Collection)
-            False -> {
-              let expected = xmlns(ns, CALDAV, "calendar")
-              case tag == expected {
-                True -> Ok(CalDAVCalendar)
-                False -> {
-                  let expected = xmlns(ns, DAV, "principal")
-                  case tag == expected {
-                    True -> Ok(Principal)
-                    False -> Ok(Other(tag))
-                  }
-                }
-              }
-            }
-          }
-        }
+      case tag {
+        "addressbook" -> Ok(CardDAVAdressbook)
+        "collection" -> Ok(Collection)
+        "calendar" -> Ok(CalDAVCalendar)
+        "principal" -> Ok(Principal)
+        _ -> Ok(Other(tag))
       }
     }
   }
 }
 
-fn decode_calendars_propstat(ns) {
-  use status <- decode_text_field(xmlns(ns, DAV, "status"))
+fn decode_calendars_propstat() {
+  use status <- decode_text_field("status")
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
     return: decode.success(None),
@@ -162,37 +151,37 @@ fn decode_calendars_propstat(ns) {
         <> "'.",
     ),
   )
-  use prop <- decode.field(xmlns(ns, DAV, "prop"), {
+  use prop <- decode.field("prop", {
     use display_name <- decode.optional_field(
-      xmlns(ns, DAV, "displayname"),
+      "displayname",
       None,
       decode_text() |> decode.map(Some),
     )
     use ctag <- decode.optional_field(
-      xmlns(ns, CalendarServer, "getctag"),
+      "getctag",
       None,
       decode_text() |> decode.map(Some),
     )
     use ical_calendar_color <- decode.optional_field(
-      xmlns(ns, Apple, "calendar-color"),
+      "calendar-color",
       None,
       decode_text() |> decode.map(Some),
     )
     use resource_types <- decode.optional_field(
-      xmlns(ns, DAV, "resourcetype"),
+      "resourcetype",
       None,
       decode.dict(decode.string, decode.dynamic)
         |> decode.map(fn(d) {
           dict.keys(d)
-          |> list.filter_map(fn(tag) { decode_resource_type_tag(ns, tag) })
+          |> list.filter_map(fn(tag) { decode_resource_type_tag(tag) })
           |> Some
         }),
     )
     use supported_components <- decode.optional_field(
-      xmlns(ns, CALDAV, "supported-calendar-component-set"),
+      "supported-calendar-component-set",
       None,
       decode.field(
-        xmlns(ns, CALDAV, "comp"),
+        "comp",
         decode_xml_list(decode.field(
           "$attrs",
           decode.field("name", decode.string, decode.success)
@@ -222,14 +211,14 @@ fn decode_calendars_propstat(ns) {
   Some(prop) |> decode.success
 }
 
-fn decode_calendars_response(ns) {
+fn decode_calendars_response() {
   use href <- decode.field(
-    xmlns(ns, DAV, "href"),
+    "href",
     decode.field("$text", decode.string, decode.success),
   )
   use props <- decode.field(
-    xmlns(ns, DAV, "propstat"),
-    decode_xml_list(decode_calendars_propstat(ns)),
+    "propstat",
+    decode_xml_list(decode_calendars_propstat()),
   )
   case props |> option.values() |> list.first() {
     Ok(prop) -> GetCalendarsResponse(href, prop) |> decode.success
@@ -240,25 +229,18 @@ fn decode_calendars_response(ns) {
 }
 
 fn calendars_responses_decoder() {
-  use ns <- decode.then(namespace.decode_namespaces())
-  echo ns
   use root_tag <- decode.field("$tag", decode.string)
-  let expected_root_tag = xmlns(ns, DAV, "multistatus")
-  use <- bool.guard(
-    when: root_tag != expected_root_tag,
-    return: decode.failure(
-      [],
-      "Expected '"
-        <> expected_root_tag
-        <> "' as the root tag, found '"
-        <> root_tag
-        <> "'.",
-    ),
-  )
+  // use <- bool.guard(
+  //   when: root_tag != "multistatus",
+  //   return: decode.failure(
+  //     [],
+  //     "Expected 'multistatus' as the root tag, found '" <> root_tag <> "'.",
+  //   ),
+  // )
 
   use responses <- decode.field(
-    xmlns(ns, DAV, "response"),
-    decode_xml_list(decode_calendars_response(ns)),
+    "response",
+    decode_xml_list(decode_calendars_response()),
   )
   responses |> decode.success
 }
@@ -304,9 +286,14 @@ pub fn parse_changed(
   calendar: Calendar,
   response: Response(String),
 ) -> Result(Change(Calendar), ShoggError(e)) {
+  use dyn <- result.try(
+    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  )
+  let stripped = namespace.strip_dynamic(dyn)
   use parsed <- result.try(
-    xml.parse(response.body, ctag_decoder())
-    |> result.map_error(DecodeError),
+    decode.run(stripped, ctag_decoder())
+    |> result.map_error(xml.UnableToDecode)
+    |> result.map_error(XmlDecodeError),
   )
   case parsed {
     [] -> Error(ParseError("No ctag response found"))
@@ -338,37 +325,34 @@ type CtagResponse {
 }
 
 fn ctag_decoder() {
-  use ns <- decode.then(namespace.decode_namespaces())
   use root_tag <- decode.field("$tag", decode.string)
   use <- bool.guard(
-    when: root_tag != xmlns(ns, DAV, "multistatus"),
+    when: root_tag != "multistatus",
     return: decode.failure([], "Expected 'multistatus' as root tag"),
   )
 
-  use responses <- decode.field(
-    xmlns(ns, DAV, "response"),
-    decode_xml_list(decode_ctag_response(ns)),
+  use responses <- decode.optional_field(
+    "response",
+    [],
+    decode_xml_list(decode_ctag_response()),
   )
   responses |> decode.success
 }
 
-fn decode_ctag_response(ns) {
+fn decode_ctag_response() {
   use _href <- decode.field(
-    xmlns(ns, DAV, "href"),
+    "href",
     decode.field("$text", decode.string, decode.success),
   )
-  use props <- decode.field(
-    xmlns(ns, DAV, "propstat"),
-    decode_xml_list(decode_ctag_propstat(ns)),
-  )
+  use props <- decode.field("propstat", decode_xml_list(decode_ctag_propstat()))
   case props |> option.values() |> list.first() {
     Ok(CtagProp(Some(ctag))) -> CtagResponse(ctag:) |> decode.success
     _ -> decode.failure(CtagResponse(ctag: ""), "No 200 OK ctag found")
   }
 }
 
-fn decode_ctag_propstat(ns) {
-  use status <- decode.field(xmlns(ns, DAV, "status"), decode_text())
+fn decode_ctag_propstat() {
+  use status <- decode.field("status", decode_text())
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
     return: decode.success(None),
@@ -380,9 +364,9 @@ fn decode_ctag_propstat(ns) {
       "Expected propstat status to be '200 OK'. Got '" <> status <> "'.",
     ),
   )
-  use prop <- decode.field(xmlns(ns, DAV, "prop"), {
+  use prop <- decode.field("prop", {
     use ctag <- decode.optional_field(
-      xmlns(ns, CalendarServer, "getctag"),
+      "getctag",
       None,
       decode_text() |> decode.map(Some),
     )

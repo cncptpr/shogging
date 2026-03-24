@@ -1,5 +1,3 @@
-// IMPORTS ---------------------------------------------------------------------
-
 import gleam/erlang/process
 import gleam/hackney
 import gleam/int
@@ -124,68 +122,11 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
         task.send_create_task(model.client, model.calendar, summary)
       #(model, effect.none())
     }
-    UserCheckedTask(uid:, checked:) -> {
-      let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
-      // TODO: use Enum for status and timestamp for time.
-      let task = case checked {
-        True ->
-          task.Task(
-            ..task,
-            status: Some("COMPLETED"),
-            completed: Some(timestamp.system_time() |> task.format_cal_date),
-          )
-        False ->
-          task.Task(..task, status: Some("NEEDS-ACTION"), completed: None)
-      }
-      let tasks =
-        list.map(model.tasks, fn(t) {
-          case t.uid == uid {
-            True -> task
-            False -> t
-          }
-        })
-        |> sort_tasks
-      #(
-        Model(..model, tasks:),
-        effect.from(fn(dispatch) {
-          let assert Ok(task) = task.send_update_task(model.client, task)
-          task |> ShoggSendUpdate |> dispatch
-        }),
-      )
-    }
-    UserRenamedTask(uid:, summary:) -> {
-      let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
-      let task = task.Task(..task, summary: Some(summary))
-      let tasks =
-        list.map(model.tasks, fn(t) {
-          case t.uid == uid {
-            True -> task
-            False -> t
-          }
-        })
-        |> sort_tasks
-      #(
-        Model(..model, tasks:),
-        effect.from(fn(dispatch) {
-          let assert Ok(task) = task.send_update_task(model.client, task)
-          task |> ShoggSendUpdate |> dispatch
-        }),
-      )
-    }
-    UserDeletedTask(uid:) -> {
-      let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
-      let tasks =
-        model.tasks |> list.filter(fn(t) { t.uid != uid }) |> sort_tasks
-      #(
-        Model(..model, tasks:),
-        effect.from(fn(_dispatch) {
-          let assert Ok(_) = task.send_delete_task(model.client, task)
-          // TODO: Make ShoggSendDelete message
-          // ShoggSendUpdate |> dispatch
-          Nil
-        }),
-      )
-    }
+    UserCheckedTask(uid:, checked:) ->
+      handle_user_checked_task(model, uid, checked)
+    UserRenamedTask(uid:, summary:) ->
+      handle_user_renamed_task(model, uid, summary)
+    UserDeletedTask(uid:) -> handle_user_deleted_task(model, uid)
     ShoggDetectedChange(calendar) -> {
       let model = Model(..model, calendar:)
       #(
@@ -197,6 +138,98 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
       )
     }
   }
+}
+
+fn handle_user_renamed_task(
+  model: Model,
+  uid: String,
+  summary: String,
+) -> #(Model, effect.Effect(Msg)) {
+  let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
+  let task = task.Task(..task, summary: Some(summary))
+  let tasks =
+    list.map(model.tasks, fn(t) {
+      case t.uid == uid {
+        True -> task
+        False -> t
+      }
+    })
+    |> sort_tasks
+
+  let do_request = fn(dispatch) {
+    let response = task.send_update_task(model.client, task)
+    case response {
+      Ok(task) -> task |> ShoggSendUpdate |> dispatch
+      // TODO: Proper retry
+      Error(_) -> io.print_error("[Error] Failed to send update")
+    }
+  }
+
+  #(Model(..model, tasks:), effect.from(do_request))
+}
+
+fn handle_user_checked_task(
+  model: Model,
+  uid: String,
+  checked: Bool,
+) -> #(Model, effect.Effect(Msg)) {
+  let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
+  // TODO: use Enum for status and timestamp for time.
+  let task = case checked {
+    True ->
+      task.Task(
+        ..task,
+        status: Some("COMPLETED"),
+        completed: Some(timestamp.system_time() |> task.format_cal_date),
+      )
+    False -> task.Task(..task, status: Some("NEEDS-ACTION"), completed: None)
+  }
+  let tasks =
+    list.map(model.tasks, fn(t) {
+      case t.uid == uid {
+        True -> task
+        False -> t
+      }
+    })
+    |> sort_tasks
+  #(
+    Model(..model, tasks:),
+    effect.from(fn(dispatch) {
+      // TODO: Proper Retry
+      let assert Ok(task) = task.send_update_task(model.client, task)
+      task |> ShoggSendUpdate |> dispatch
+    }),
+  )
+}
+
+fn handle_user_deleted_task(
+  model: Model,
+  uid: String,
+) -> #(Model, effect.Effect(Msg)) {
+  let assert Ok(task) = list.find(model.tasks, fn(t) { t.uid == uid })
+  let tasks = model.tasks |> list.filter(fn(t) { t.uid != uid }) |> sort_tasks
+  #(
+    Model(..model, tasks:),
+    effect.from(fn(_dispatch) {
+      let response = task.send_delete_task(model.client, task)
+
+      case response {
+        Ok(_) -> Nil
+        Error(_) ->
+          io.println(
+            "[Error] Failed to delete task "
+            <> case task.summary {
+              Some(summary) -> summary <> " "
+              None -> ""
+            }
+            <> "["
+            <> task.uid
+            <> "]",
+          )
+      }
+      Nil
+    }),
+  )
 }
 
 fn view(model: Model) -> Element(Msg) {
