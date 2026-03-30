@@ -120,7 +120,7 @@ fn update(model: Model, msg: Msg) -> #(Model, _) {
     UserAddedTask(summary:) -> {
       let assert Ok(_href) =
         task.send_create_task(model.client, model.calendar, summary)
-      #(model, effect.none())
+      #(model, fetch_tasks_effect(model))
     }
     UserCheckedTask(uid:, checked:) ->
       handle_user_checked_task(model, uid, checked)
