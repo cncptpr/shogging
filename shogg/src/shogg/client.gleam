@@ -34,6 +34,10 @@ pub type UserInfo {
   UserInfo(principal: String)
 }
 
+pub type CalendarHomeSet {
+  CalendarHomeSet(home: String)
+}
+
 pub const http = http.Http
 
 pub const https = http.Https
@@ -151,6 +155,88 @@ fn encode_basic_auth(username: String, password: String) -> String {
 
 type HomePropfindResponse {
   HomePropfindResponse(href: String, current_user_principal: String)
+}
+
+type CalendarHomeSetPropfindResponse {
+  CalendarHomeSetPropfindResponse(href: String, calendar_home_set: String)
+}
+
+pub fn fetch_calendar_home_set(
+  client: Client(IO(e)),
+  user_info: UserInfo,
+) -> Result(CalendarHomeSet, ShoggError(e)) {
+  let response = calendar_home_set_request(client, user_info) |> client.io.send
+  use response <- result.try(response |> result.map_error(SendError))
+  parse_calendar_home_set(response)
+}
+
+pub fn calendar_home_set_request(
+  client: Client(_),
+  user_info: UserInfo,
+) -> Request(String) {
+  let body =
+    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n<D:propfind xmlns:D=\"DAV:\" xmlns:C=\"urn:ietf:params:xml:ns:caldav\">\n  <D:prop>\n    <C:calendar-home-set/>\n  </D:prop>\n</D:propfind>"
+  client.request
+  |> request.set_path(user_info.principal)
+  |> request.set_method(http.Other("PROPFIND"))
+  |> request.set_header("Depth", "0")
+  |> request.set_header("Content-Type", "application/xml; charset=utf-8")
+  |> request.set_body(body)
+}
+
+pub fn parse_calendar_home_set(
+  response: Response(String),
+) -> Result(CalendarHomeSet, ShoggError(e)) {
+  use dyn <- result.try(
+    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  )
+  let stripped = namespace.strip_dynamic(dyn)
+
+  use parsed <- result.try(
+    decode.run(stripped, calendar_home_set_decoder())
+    |> result.map_error(xml.UnableToDecode)
+    |> result.map_error(XmlDecodeError),
+  )
+  case parsed {
+    [] -> Error(ParseError("No responses found"))
+    [CalendarHomeSetPropfindResponse(calendar_home_set:, ..), ..] ->
+      Ok(CalendarHomeSet(calendar_home_set))
+  }
+}
+
+fn calendar_home_set_decoder() {
+  use responses <- decode.field(
+    "response",
+    decode.one_of(decode.list(decode_calendar_home_set_item()), or: [
+      decode_calendar_home_set_item() |> decode.map(fn(v) { [v] }),
+    ]),
+  )
+  responses |> decode.success
+}
+
+fn decode_calendar_home_set_item() {
+  use _href <- decode.field(
+    "href",
+    decode.field("$text", decode.string, decode.success),
+  )
+  use calendar_home_set <- decode.field(
+    "propstat",
+    decode.field(
+      "prop",
+      decode.field(
+        "calendar-home-set",
+        decode.field(
+          "href",
+          decode.field("$text", decode.string, decode.success),
+          decode.success,
+        ),
+        decode.success,
+      ),
+      decode.success,
+    ),
+  )
+  CalendarHomeSetPropfindResponse(href: "", calendar_home_set:)
+  |> decode.success()
 }
 
 fn user_info_decoder() {

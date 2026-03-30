@@ -88,13 +88,22 @@ pub fn discovery_request_test() {
 }
 
 pub fn calendars_request_test() {
-  let user_info =
-    client.UserInfo("/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/")
+  let home_set =
+    client.CalendarHomeSet("/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/")
 
   setup_client()
-  |> calendar.calendars_request(user_info)
+  |> calendar.calendars_request(home_set)
   |> format_request
   |> birdie.snap(title: "Calendars Request")
+}
+
+pub fn calendar_home_set_request_test() {
+  let user_info = client.UserInfo("/remote.php/dav/principals/users/testuser/")
+
+  setup_client()
+  |> client.calendar_home_set_request(user_info)
+  |> format_request
+  |> birdie.snap(title: "Calendar Home Set Request")
 }
 
 pub fn changed_request_test() {

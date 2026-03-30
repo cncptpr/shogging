@@ -122,16 +122,9 @@ pub fn parse_tasks(
 }
 
 fn tasks_responses_decoder() {
-  use root_tag <- decode.field("$tag", decode.string)
-  use <- bool.guard(
-    when: root_tag != "multistatus",
-    return: decode.failure(
-      [],
-      "Expected 'multistatus' as the root tag, found '" <> root_tag <> "'.",
-    ),
-  )
-  use responses <- decode.field(
+  use responses <- decode.optional_field(
     "response",
+    [],
     decode_xml_list({
       use href <- decode.field(
         "href",

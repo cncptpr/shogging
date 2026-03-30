@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:" xmlns:CS="http://calendarserver.org/ns/"><response><href>/caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/def-calendar/</href><propstat><prop><CS:getctag>"60b4c36a27fcf9bfe6c6c3d2904c2ccfd957bceb3f1040d39db59f34a21bf5ab"</CS:getctag></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>

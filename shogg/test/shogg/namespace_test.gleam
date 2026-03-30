@@ -36,7 +36,7 @@ pub fn strip_simple_tag_test() {
 }
 
 pub fn strip_user_info_test() {
-  let body = read_response("user_info.xml")
+  let body = read_response("radicale/user_info.xml")
   let result =
     parse_with_stripped(body, {
       use response <- decode.field(
@@ -56,7 +56,7 @@ pub fn strip_user_info_test() {
 }
 
 pub fn strip_user_info_nextcloud_test() {
-  let body = read_response("user_info_nextcloud.xml")
+  let body = read_response("nextcloud/user_info.xml")
   let result =
     parse_with_stripped(body, {
       use response <- decode.field(
@@ -77,7 +77,7 @@ pub fn strip_user_info_nextcloud_test() {
 }
 
 pub fn strip_calendars_xml_test() {
-  let body = read_response("calendars.xml")
+  let body = read_response("radicale/calendars.xml")
   let result =
     parse_with_stripped(body, {
       use response <- decode.field(

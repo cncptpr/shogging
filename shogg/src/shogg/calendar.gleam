@@ -4,14 +4,13 @@ import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
-import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import parsed_it/xml
 import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
-import shogg/client.{type Client, type IO, type UserInfo}
+import shogg/client.{type CalendarHomeSet, type Client, type IO}
 import shogg/namespace
 
 pub type VComponent {
@@ -38,16 +37,16 @@ pub type Change(a) {
 
 pub fn fetch_calendars(
   client: Client(IO(e)),
-  info: UserInfo,
+  home_set: CalendarHomeSet,
 ) -> Result(List(Calendar), ShoggError(e)) {
-  let response = calendars_request(client, info) |> client.io.send
+  let response = calendars_request(client, home_set) |> client.io.send
   use response <- result.try(response |> result.map_error(SendError))
   parse_calendars(response)
 }
 
 pub fn calendars_request(
   client: Client(_),
-  user_info: UserInfo,
+  calendar_home_set: CalendarHomeSet,
 ) -> Request(String) {
   let request_body =
     "<d:propfind xmlns:d=\"DAV:\" xmlns:cs=\"http://calendarserver.org/ns/\" xmlns:c=\"urn:ietf:params:xml:ns:caldav\" xmlns:apple=\"http://apple.com/ns:ical/\">
@@ -61,7 +60,7 @@ pub fn calendars_request(
       </d:propfind>"
 
   client.request
-  |> request.set_path(user_info.principal)
+  |> request.set_path(calendar_home_set.home)
   |> request.set_method(http.Other("PROPFIND"))
   |> request.set_body(request_body)
   |> request.set_header("Depth", "1")
@@ -229,15 +228,6 @@ fn decode_calendars_response() {
 }
 
 fn calendars_responses_decoder() {
-  use root_tag <- decode.field("$tag", decode.string)
-  // use <- bool.guard(
-  //   when: root_tag != "multistatus",
-  //   return: decode.failure(
-  //     [],
-  //     "Expected 'multistatus' as the root tag, found '" <> root_tag <> "'.",
-  //   ),
-  // )
-
   use responses <- decode.field(
     "response",
     decode_xml_list(decode_calendars_response()),
@@ -325,12 +315,6 @@ type CtagResponse {
 }
 
 fn ctag_decoder() {
-  use root_tag <- decode.field("$tag", decode.string)
-  use <- bool.guard(
-    when: root_tag != "multistatus",
-    return: decode.failure([], "Expected 'multistatus' as root tag"),
-  )
-
   use responses <- decode.optional_field(
     "response",
     [],
