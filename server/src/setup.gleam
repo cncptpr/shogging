@@ -97,7 +97,11 @@ pub fn serve_html() -> Response(ResponseData) {
         ]),
       ]),
       html.body(
-        [attribute.styles([#("max-width", "32rem"), #("margin", "3rem auto")])],
+        [
+          attribute.class(
+            "min-h-screen bg-[radial-gradient(circle_at_top,_#fff7e6,_#f7e3bf_55%,_#f0d2a2_100%)] text-amber-950",
+          ),
+        ],
         [server_component.element([server_component.route("/ws")], [])],
       ),
     ])
