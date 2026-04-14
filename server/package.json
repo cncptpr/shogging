@@ -1,0 +1,6 @@
+{
+  "description": "This is only for tailwindcss to run, nothing else requires it."
+  "dependencies": {
+    "tailwindcss": "^4.2.2"
+  }
+}

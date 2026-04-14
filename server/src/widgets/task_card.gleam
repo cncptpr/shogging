@@ -1,10 +1,9 @@
 import gleam/list
 import gleam/option.{Some}
-import lustre/attribute.{attribute, styles}
+import lustre/attribute.{attribute, class}
 import lustre/element/html
 import lustre/event
 import shogg/task
-import styles.{f, flex, invert, vcenter, width}
 import task_message.{UserCheckedTask}
 
 pub fn render(item: task.Task) {
@@ -20,12 +19,7 @@ pub fn render(item: task.Task) {
   html.div([], [
     html.label(
       [
-        styles([
-          flex,
-          vcenter,
-          width("inherit"),
-          #("transition", "all 0.3s ease"),
-        ]),
+        class("flex align-center"),
       ],
       [
         html.input([
@@ -33,10 +27,10 @@ pub fn render(item: task.Task) {
           attribute.checked(completed),
           event.on_check(UserCheckedTask(item.uid, _)),
         ]),
-        html.span([styles([f(1)])], [
+        html.span([class("flex-1")], [
           case completed {
             True ->
-              html.del([attribute.style("color", "grey")], [
+              html.del([class("text-grey-500")], [
                 html.text(summary),
               ])
             False -> html.text(summary)
@@ -44,14 +38,13 @@ pub fn render(item: task.Task) {
         ]),
         html.button(
           [
-            attribute.class("outline"),
             attribute("x-on:click", "open = '" <> item.uid <> "'"),
           ],
           [
             html.img([
               attribute.src("https://www.svgrepo.com/show/521620/edit.svg"),
               attribute.width(20),
-              styles([invert]),
+              // class("invert"),
             ]),
           ],
         ),
@@ -64,7 +57,7 @@ pub fn render(item: task.Task) {
             html.img([
               attribute.src("https://www.svgrepo.com/show/533007/trash.svg"),
               attribute.width(20),
-              styles([invert]),
+              // class("invert"),
             ]),
           ],
         ),
@@ -72,17 +65,9 @@ pub fn render(item: task.Task) {
     ),
     html.div(
       [
-        styles([
-          #("display", "none"),
-          #("position", "absolute"),
-          #("width", "100%"),
-          #("height", "100%"),
-          #("top", "0"),
-          #("left", "0"),
-          #("bottom", "0"),
-          #("right", "0"),
-          #("background-color", "rgb(0 0 0 / 10%)"),
-        ]),
+        class(
+          "hidden absolute w-full h-full t-0 l-0 b-0 r-0 bg-[rgb(0 0 0 / 10%)]",
+        ),
         attribute("x-show", "open === '" <> item.uid <> "'"),
         attribute("x-on:click", "open = undefined"),
       ],
@@ -90,13 +75,7 @@ pub fn render(item: task.Task) {
         html.article(
           [
             attribute.id(popover_id),
-            attribute.class("popup-content"),
-            styles([
-              #("position", "absolute"),
-              #("top", "50%"),
-              #("left", "50%"),
-              #("transform", "translate(-50%, -50%)"),
-            ]),
+            class("absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"),
             attribute("x-on:click.stop", ""),
           ],
           [

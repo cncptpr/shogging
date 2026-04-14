@@ -18,9 +18,21 @@ import task_message
 
 // HTML ------------------------------------------------------------------------
 
-pub fn serve_static(from module, serve file, as_ content_type) {
+pub fn router(request, component) {
+  case request.path_segments(request) {
+    [] -> serve_html()
+    ["lustre", "runtime.mjs"] -> serve_runtime()
+    ["ws"] -> serve_component(request, component)
+    ["static", "tailwind.css"] ->
+      serve_file(from: "shogging", serve: "tailwind.css", as_: "text/css")
+
+    _ -> response.new(404) |> response.set_body(mist.Bytes(bytes_tree.new()))
+  }
+}
+
+pub fn serve_file(from module, serve file, as_ content_type) {
   let assert Ok(priv_path) = application.priv_directory(module)
-  let static_path = priv_path <> "/static/" <> file
+  let static_path = priv_path <> "/" <> file
   case mist.send_file(static_path, offset: 0, limit: None) {
     Ok(file) ->
       response.new(200)
@@ -81,9 +93,7 @@ pub fn serve_html() -> Response(ResponseData) {
         ),
         html.link([
           attribute.rel("stylesheet"),
-          attribute.href(
-            "https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.orange.min.css",
-          ),
+          attribute.href("/static/tailwind.css"),
         ]),
       ]),
       html.body(
@@ -102,9 +112,9 @@ pub fn serve_html() -> Response(ResponseData) {
 // JAVASCRIPT ------------------------------------------------------------------
 
 pub fn serve_runtime() -> Response(ResponseData) {
-  serve_static(
+  serve_file(
     from: "lustre",
-    serve: "lustre-server-component.mjs",
+    serve: "static/lustre-server-component.mjs",
     as_: "application/javascript",
   )
 }

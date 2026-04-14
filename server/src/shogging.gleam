@@ -1,14 +1,11 @@
 import envoy
-import gleam/bytes_tree
 import gleam/erlang/process
 import gleam/hackney
-import gleam/http/request.{type Request}
-import gleam/http/response.{type Response}
 import gleam/int
 import gleam/list
 import gleam/result
 import lustre
-import mist.{type Connection, type ResponseData}
+import mist
 import setup
 import shogg/calendar
 import shogg/client
@@ -37,15 +34,7 @@ pub fn main() {
     lustre.start_server_component(task_list, #(client, calendar, tasks, delay))
 
   let assert Ok(_) =
-    fn(request: Request(Connection)) -> Response(ResponseData) {
-      case request.path_segments(request) {
-        [] -> setup.serve_html()
-        ["lustre", "runtime.mjs"] -> setup.serve_runtime()
-        ["ws"] -> setup.serve_component(request, component)
-        _ ->
-          response.new(404) |> response.set_body(mist.Bytes(bytes_tree.new()))
-      }
-    }
+    setup.router(_, component)
     |> mist.new
     |> mist.bind("0.0.0.0")
     |> mist.port(1234)

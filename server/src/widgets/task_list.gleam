@@ -1,11 +1,10 @@
 import gleam/io
 import gleam/list
-import lustre/attribute.{attribute, styles}
+import lustre/attribute.{attribute, class}
 import lustre/element/html
 import lustre/element/keyed
 import lustre/event
 import shogg/task
-import styles.{f, flex, vcenter}
 import task_message.{UserClickedReload}
 import widgets/task_card
 
@@ -19,15 +18,17 @@ pub fn render(tasks: List(task.Task)) {
 
   html.main(
     [
-      attribute.class("container"),
+      class("container"),
       attribute("x-data", "{ new_summary: undefined }"),
     ],
     [
-      html.div([styles([flex, vcenter])], [
-        html.h1([styles([f(1)])], [html.text("Shogging List")]),
+      html.div([class("flex align-center")], [
+        html.h1([class("flex-1")], [
+          html.text("Shogging List"),
+        ]),
         html.button(
           [
-            styles([#("padding", "5px 10px"), #("margin-right", "10px")]),
+            class("px-2.5 py-1.25 mr-2.5"),
             attribute("x-init", ""),
             attribute("x-on:click", "new_summary = ''"),
           ],
@@ -35,7 +36,7 @@ pub fn render(tasks: List(task.Task)) {
         ),
         html.button(
           [
-            styles([#("padding", "5px 10px")]),
+            class("px-2.5 py-1.25"),
             attribute.class("outline"),
             event.on_click(UserClickedReload),
           ],
@@ -48,29 +49,16 @@ pub fn render(tasks: List(task.Task)) {
       ),
       html.div(
         [
-          styles([
-            #("display", "none"),
-            #("position", "absolute"),
-            #("width", "100%"),
-            #("height", "100%"),
-            #("top", "0"),
-            #("left", "0"),
-            #("bottom", "0"),
-            #("right", "0"),
-            #("background-color", "rgb(0 0 0 / 10%)"),
-          ]),
+          class("hidden absolute w-full h-full inset-0 bg-black/10"),
           attribute("x-show", "new_summary !== undefined"),
           attribute("x-on:click", "new_summary = undefined"),
         ],
         [
           html.article(
             [
-              styles([
-                #("position", "absolute"),
-                #("top", "50%"),
-                #("left", "50%"),
-                #("transform", "translate(-50%, -50%)"),
-              ]),
+              class(
+                "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+              ),
               attribute("x-on:click.stop", ""),
             ],
             [

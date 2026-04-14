@@ -1,6 +1,12 @@
 [tasks."server:dev"]
 description = "Run dev server for shogging"
 run = "gleam run"
+depends = [ "server:tailwindcss" ]
+dir = "server"
+
+[tasks."server:tailwindcss"]
+description = "Run tailwindcss on the server"
+run = "mise exec npm:tailwindcss/cli -- tailwindcss -i ./src/css/app.css -o ./priv/tailwind.css"
 dir = "server"
 
 [tasks."shogg:test"]
@@ -14,5 +20,8 @@ CALDAV_USERNAME = { age = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNzaC1lZDI1NTE5IHh3V
 CALDAV_PASSWORD = { age = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IHNzaC1lZDI1NTE5IHh3VnkzQSBwWFkvZ3BIdkJ6RUhZRzVneWhVb3dVU3Zoc1FSMmRKa0FWcmwwM2VkQkdFCkRsN3F0bkhIdnZSUUpmUXFtQmhKWVJCQysyTURNdDd4OTc1c0VPdzM2d3cKLT4gNT4wY0hkLm4tZ3JlYXNlIFcgcig0azF+NyBtfXUgbQpKVjgzK1NoeEZPcU0vdnVkdVRQR0gwZkVMQmJOQXcrVDBMV2hyR2tkTURnTGF1SEdUZGU1QWM3akt6Wkt0dzV1Ckl0N0ZzZEcvZXlrakRPdWtQVmNjblpBejc1WFdtRGN1U1EKLS0tIGkxSk1kd1Z1YVk4dC9FdTI1TmE4VitPbzJncWNEMTFuaWxQZytweUtWYVUKYCh1XwdZilAa2AxKRjctKKXc8SWE+BXv8lX8wkZtpcyDLIuOVH5de67gp01fkAYJMEucSw+hNxQSEQF4Ag" }
 CALDAV_CALENDAR = "Shogging Test"
 CHECK_CHANGE_DELAY = "20"
+
+[tools]
+"npm:@tailwindcss/cli" = "latest"
 
 # TODO: Add gleam, rebar, etc. here
