@@ -13,7 +13,7 @@ import lustre/attribute
 import lustre/element
 import lustre/element/html.{html}
 import lustre/server_component
-import mist.{type Connection, type ResponseData}
+import mist.{type Connection}
 import task_message
 
 // HTML ------------------------------------------------------------------------
@@ -23,8 +23,20 @@ pub fn router(request, component) {
     [] -> serve_html()
     ["lustre", "runtime.mjs"] -> serve_runtime()
     ["ws"] -> serve_component(request, component)
-    ["static", "tailwind.css"] ->
+    ["tailwind.css"] ->
       serve_file(from: "shogging", serve: "tailwind.css", as_: "text/css")
+    ["static", "edit.svg"] ->
+      serve_file(
+        from: "shogging",
+        serve: "static/edit.svg",
+        as_: "image/svg+xml",
+      )
+    ["static", "trash.svg"] ->
+      serve_file(
+        from: "shogging",
+        serve: "static/trash.svg",
+        as_: "image/svg+xml",
+      )
 
     _ -> response.new(404) |> response.set_body(mist.Bytes(bytes_tree.new()))
   }
@@ -45,7 +57,7 @@ pub fn serve_file(from module, serve file, as_ content_type) {
   }
 }
 
-pub fn serve_html() -> Response(ResponseData) {
+pub fn serve_html() -> Response(mist.ResponseData) {
   let html =
     html([attribute.lang("en")], [
       html.head([], [
@@ -93,13 +105,13 @@ pub fn serve_html() -> Response(ResponseData) {
         ),
         html.link([
           attribute.rel("stylesheet"),
-          attribute.href("/static/tailwind.css"),
+          attribute.href("/tailwind.css"),
         ]),
       ]),
       html.body(
         [
           attribute.class(
-            "min-h-screen bg-[radial-gradient(circle_at_top,_#fff7e6,_#f7e3bf_55%,_#f0d2a2_100%)] text-amber-950",
+            "min-h-screen bg-[#f7efd7] text-amber-950 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.55),rgba(255,255,255,0.1)),repeating-linear-gradient(0deg,rgba(148,120,88,0.08)_0,rgba(148,120,88,0.08)_1px,transparent_1px,transparent_28px),repeating-linear-gradient(90deg,rgba(148,120,88,0.08)_0,rgba(148,120,88,0.08)_1px,transparent_1px,transparent_28px)]",
           ),
         ],
         [server_component.element([server_component.route("/ws")], [])],
@@ -115,7 +127,7 @@ pub fn serve_html() -> Response(ResponseData) {
 
 // JAVASCRIPT ------------------------------------------------------------------
 
-pub fn serve_runtime() -> Response(ResponseData) {
+pub fn serve_runtime() -> Response(mist.ResponseData) {
   serve_file(
     from: "lustre",
     serve: "static/lustre-server-component.mjs",
@@ -128,7 +140,7 @@ pub fn serve_runtime() -> Response(ResponseData) {
 pub fn serve_component(
   request: Request(Connection),
   component,
-) -> Response(ResponseData) {
+) -> Response(mist.ResponseData) {
   mist.websocket(
     request:,
     on_init: init_component_socket(_, component),

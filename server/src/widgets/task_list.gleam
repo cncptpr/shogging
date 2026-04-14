@@ -30,7 +30,7 @@ pub fn render(tasks: List(task.Task)) {
           html.button(
             [
               class(
-                "rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm transition hover:bg-amber-800",
+                "rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm",
               ),
               attribute("x-init", ""),
               attribute("x-on:click", "new_summary = ''"),
@@ -41,7 +41,7 @@ pub fn render(tasks: List(task.Task)) {
           html.button(
             [
               class(
-                "rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100",
+                "rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm",
               ),
               event.on_click(UserClickedReload),
               attribute.type_("button"),
@@ -57,7 +57,7 @@ pub fn render(tasks: List(task.Task)) {
       html.div(
         [
           attribute.style("display", "none"),
-          class("fixed inset-0 bg-amber-900/10 backdrop-blur-[1px]"),
+          class("fixed inset-0 bg-amber-900/5"),
           attribute("x-show", "new_summary !== undefined"),
           attribute("x-on:click", "new_summary = undefined"),
         ],
@@ -65,7 +65,7 @@ pub fn render(tasks: List(task.Task)) {
           html.article(
             [
               class(
-                "absolute top-1/2 left-1/2 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-100 bg-amber-50/90 p-6 shadow-[0_10px_30px_rgba(120,70,30,0.2)]",
+                "absolute top-1/2 left-1/2 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-[0_10px_24px_rgba(120,70,30,0.18)]",
               ),
               attribute("x-on:click.stop", ""),
             ],
@@ -87,14 +87,14 @@ pub fn render(tasks: List(task.Task)) {
                       attribute.required(True),
                       attribute("x-model", "new_summary"),
                       class(
-                        "w-full rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-amber-900 shadow-inner focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-200",
+                        "w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-amber-900 shadow-inner focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-200",
                       ),
                     ]),
                     html.button(
                       [
                         attribute.type_("submit"),
                         class(
-                          "rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm transition hover:bg-amber-700",
+                          "rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm",
                         ),
                       ],
                       [html.text("Submit")],

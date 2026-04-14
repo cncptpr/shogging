@@ -20,7 +20,7 @@ pub fn render(item: task.Task) {
     html.label(
       [
         class(
-          "group flex items-center gap-3 rounded-xl border border-amber-100/80 bg-amber-50/70 px-4 py-3 shadow-[0_1px_0_rgba(120,70,30,0.08),0_10px_20px_rgba(120,70,30,0.08)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-[0_1px_0_rgba(120,70,30,0.12),0_16px_30px_rgba(120,70,30,0.14)]",
+          "group flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-[0_1px_0_rgba(120,70,30,0.06),0_6px_14px_rgba(120,70,30,0.08)]",
         ),
       ],
       [
@@ -28,14 +28,14 @@ pub fn render(item: task.Task) {
           attribute.type_("checkbox"),
           attribute.checked(completed),
           class(
-            "h-4 w-4 rounded-sm border-amber-300 text-amber-700 focus:ring-2 focus:ring-amber-300",
+            "h-4 w-4 rounded-sm border-amber-300 focus:ring-2 focus:ring-amber-300",
           ),
           event.on_check(UserCheckedTask(item.uid, _)),
         ]),
-        html.span([class("flex-1 text-amber-900")], [
+        html.span([class("flex-1")], [
           case completed {
             True ->
-              html.del([class("text-amber-500/80")], [
+              html.del([], [
                 html.text(summary),
               ])
             False -> html.text(summary)
@@ -43,34 +43,30 @@ pub fn render(item: task.Task) {
         ]),
         html.button(
           [
-            class(
-              "rounded-md p-1.5 text-amber-600/80 transition hover:bg-amber-100 hover:text-amber-800",
-            ),
+            class("rounded-md p-1.5"),
             attribute("x-on:click", "open = '" <> item.uid <> "'"),
             attribute.type_("button"),
           ],
           [
             html.img([
-              attribute.src("https://www.svgrepo.com/show/521620/edit.svg"),
+              attribute.src("/static/edit.svg"),
               attribute.width(18),
-              class("opacity-70 transition group-hover:opacity-100"),
+              class("opacity-80"),
               // class("invert"),
             ]),
           ],
         ),
         html.button(
           [
-            class(
-              "rounded-md p-1.5 text-amber-600/80 transition hover:bg-amber-100 hover:text-amber-800",
-            ),
+            class("rounded-md p-1.5"),
             event.on_click(task_message.UserDeletedTask(item.uid)),
             attribute.type_("button"),
           ],
           [
             html.img([
-              attribute.src("https://www.svgrepo.com/show/533007/trash.svg"),
+              attribute.src("/static/trash.svg"),
               attribute.width(18),
-              class("opacity-70 transition group-hover:opacity-100"),
+              class("opacity-80"),
               // class("invert"),
             ]),
           ],
@@ -80,7 +76,7 @@ pub fn render(item: task.Task) {
     html.div(
       [
         attribute.attribute("style", "display: none;"),
-        class("fixed inset-0 z-[9999] bg-amber-900/10 backdrop-blur-[1px]"),
+        class("fixed inset-0 z-[9999] bg-amber-900/5"),
         attribute("x-show", "open === '" <> item.uid <> "'"),
         attribute("x-on:click", "open = undefined"),
       ],
@@ -89,7 +85,7 @@ pub fn render(item: task.Task) {
           [
             attribute.id(popover_id),
             class(
-              "absolute top-1/2 left-1/2 z-[10000] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-100 bg-amber-50/90 p-6 shadow-[0_10px_30px_rgba(120,70,30,0.2)]",
+              "absolute top-1/2 left-1/2 z-[10000] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-[0_10px_24px_rgba(120,70,30,0.18)]",
             ),
             attribute("x-on:click.stop", ""),
           ],
@@ -111,14 +107,14 @@ pub fn render(item: task.Task) {
                     attribute.value(summary),
                     attribute.required(True),
                     class(
-                      "w-full rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-amber-900 shadow-inner focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-200",
+                      "w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-amber-900 shadow-inner focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-200",
                     ),
                   ]),
                   html.button(
                     [
                       attribute.type_("submit"),
                       class(
-                        "rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm transition hover:bg-amber-700",
+                        "rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-amber-50 shadow-sm",
                       ),
                     ],
                     [html.text("Submit")],
