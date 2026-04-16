@@ -5,7 +5,7 @@ import lustre/element/html
 import lustre/element/keyed
 import lustre/event
 import shogg/task
-import task_message.{UserClickedReload}
+import message.{UserClickedReload}
 import widgets/task_card
 
 pub fn render(tasks: List(task.Task)) {
@@ -13,7 +13,7 @@ pub fn render(tasks: List(task.Task)) {
     io.println("Submitting")
     let assert Ok(#(_, summary)) =
       list.find(fields, fn(f: #(String, String)) { f.0 == "summary" })
-    summary |> task_message.UserAddedTask
+    summary |> message.UserAddedTask
   }
 
   html.main(

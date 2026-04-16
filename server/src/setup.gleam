@@ -14,14 +14,19 @@ import lustre/element
 import lustre/element/html.{html}
 import lustre/server_component
 import mist.{type Connection}
-import task_message
+import message
 
 // HTML ------------------------------------------------------------------------
 
 pub fn router(request, component) {
   case request.path_segments(request) {
     [] -> serve_html()
-    ["lustre", "runtime.mjs"] -> serve_runtime()
+    ["lustre", "runtime.mjs"] ->
+      serve_file(
+        from: "lustre",
+        serve: "static/lustre-server-component.mjs",
+        as_: "application/javascript",
+      )
     ["ws"] -> serve_component(request, component)
     ["tailwind.css"] ->
       serve_file(from: "shogging", serve: "tailwind.css", as_: "text/css")
@@ -36,6 +41,12 @@ pub fn router(request, component) {
         from: "shogging",
         serve: "static/trash.svg",
         as_: "image/svg+xml",
+      )
+    ["static", "alpinejs@3.x.x.js"] ->
+      serve_file(
+        from: "shogging",
+        serve: "static/alpinejs@3.x.x.js",
+        as_: "application/javascript",
       )
 
     _ -> response.new(404) |> response.set_body(mist.Bytes(bytes_tree.new()))
@@ -73,9 +84,7 @@ pub fn serve_html() -> Response(mist.ResponseData) {
         ),
         html.script(
           [
-            attribute.src(
-              "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js",
-            ),
+            attribute.src("/static/alpinejs@3.x.x.js"),
             attribute.attribute("defer", ""),
           ],
           "",
@@ -125,18 +134,6 @@ pub fn serve_html() -> Response(mist.ResponseData) {
   |> response.set_header("content-type", "text/html")
 }
 
-// JAVASCRIPT ------------------------------------------------------------------
-
-pub fn serve_runtime() -> Response(mist.ResponseData) {
-  serve_file(
-    from: "lustre",
-    serve: "static/lustre-server-component.mjs",
-    as_: "application/javascript",
-  )
-}
-
-// WEBSOCKET -------------------------------------------------------------------
-
 pub fn serve_component(
   request: Request(Connection),
   component,
@@ -151,13 +148,13 @@ pub fn serve_component(
 
 type ComponentSocket {
   ComponentSocket(
-    component: lustre.Runtime(task_message.Msg),
-    self: Subject(server_component.ClientMessage(task_message.Msg)),
+    component: lustre.Runtime(message.Msg),
+    self: Subject(server_component.ClientMessage(message.Msg)),
   )
 }
 
 type ComponentSocketMessage =
-  server_component.ClientMessage(task_message.Msg)
+  server_component.ClientMessage(message.Msg)
 
 type ComponentSocketInit =
   #(ComponentSocket, Option(Selector(ComponentSocketMessage)))

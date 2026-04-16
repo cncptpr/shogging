@@ -6,11 +6,11 @@ import gleam/list
 import gleam/result
 import lustre
 import mist
+import server_component
 import setup
 import shogg/calendar
 import shogg/client
 import shogg/task
-import task_view
 
 pub fn main() {
   let assert Ok(host) = envoy.get("CALDAV_HOST")
@@ -29,7 +29,7 @@ pub fn main() {
   let assert Ok(calendars) = calendar.fetch_calendars(client, home_set)
   let assert Ok(calendar) = calendars |> list.find(fn(c) { c.name == calendar })
   let assert Ok(tasks) = task.fetch_tasks(client, calendar)
-  let task_list = task_view.component()
+  let task_list = server_component.component()
   let assert Ok(component) =
     lustre.start_server_component(task_list, #(client, calendar, tasks, delay))
 

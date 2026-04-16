@@ -16,7 +16,7 @@ import lustre/element/html
 import shogg/calendar.{type Calendar}
 import shogg/client.{type IO}
 import shogg/task.{type Task}
-import task_message.{
+import message.{
   type Msg, ShoggDetectedChange, ShoggFetchedTasks, ShoggSendUpdate,
   UserAddedTask, UserCheckedTask, UserClickedReload, UserDeletedTask,
   UserRenamedTask,

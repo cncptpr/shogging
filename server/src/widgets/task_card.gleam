@@ -4,13 +4,13 @@ import lustre/attribute.{attribute, class}
 import lustre/element/html
 import lustre/event
 import shogg/task
-import task_message.{UserCheckedTask}
+import message.{UserCheckedTask}
 
 pub fn render(item: task.Task) {
   let submitted = fn(fields) {
     let assert Ok(#(_, summary)) =
       list.find(fields, fn(f: #(String, String)) { f.0 == "name" })
-    summary |> task_message.UserRenamedTask(item.uid, _)
+    summary |> message.UserRenamedTask(item.uid, _)
   }
 
   let completed = task.is_competed(item)
@@ -59,7 +59,7 @@ pub fn render(item: task.Task) {
         html.button(
           [
             class("rounded-md p-1.5"),
-            event.on_click(task_message.UserDeletedTask(item.uid)),
+            event.on_click(message.UserDeletedTask(item.uid)),
             attribute.type_("button"),
           ],
           [
