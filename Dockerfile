@@ -3,17 +3,15 @@ FROM ghcr.io/gleam-lang/gleam:v1.14.0-erlang-alpine AS builder
 
 WORKDIR /app/server
 
-# Copy the library first
-
 # Dependencies first
-COPY shogg/gleam.toml shogg/manifest.toml ../shogg/
+COPY shogg/gleam.toml shogg/manifest.toml /app/shogg/
 COPY server/gleam.toml server/manifest.toml ./
 RUN apk add git && gleam deps download
 
 # Copy source and build for production
-# NOTE: Don't forget to add priv/ here, if it is ever needed
-COPY shogg/src/ ../shogg/src/
+COPY shogg/src/ /app/shogg/src/
 COPY server/src/ src/
+COPY server/priv/ priv/
 RUN gleam build
 
 # Collect the Erlang release
