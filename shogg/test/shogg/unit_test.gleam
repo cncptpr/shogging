@@ -1,13 +1,65 @@
 import gleam/http/request
 import gleam/http/response
+import gleam/list
 import gleam/option.{None}
+import gleam/string
 import gleeunit
 import gleeunit/should
+import shogg/calendar.{type VComponent, VEvent, VTask}
 import shogg/client
 import shogg/task
 
 pub fn main() {
   gleeunit.main()
+}
+
+/// A PROPFIND response for one calendar, with the given component names.
+///
+/// `VAVAILABLE` is what a current Nextcloud advertises alongside the components
+/// this app knows; the decoder used to panic on it, which took the whole service
+/// down with it.
+fn calendars_response_with_components(components: List(String)) -> String {
+  let comps =
+    components
+    |> list.map(fn(name) { "<cal:comp name=\"" <> name <> "\"/>" })
+    |> string.join("")
+
+  "<d:multistatus xmlns:d=\"DAV:\" xmlns:cal=\"urn:ietf:params:xml:ns:caldav\">"
+  <> "<d:response>"
+  <> "<d:href>/calendars/alice/tasks/</d:href>"
+  <> "<d:propstat><d:prop>"
+  <> "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>"
+  <> "<d:displayname>Tasks</d:displayname>"
+  <> "<cs:getctag>http://sabre.io/ns/sync/1</cs:getctag>"
+  <> "<cal:supported-calendar-component-set>" <> comps <> "</cal:supported-calendar-component-set>"
+  <> "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>"
+  <> "</d:response>"
+  <> "</d:multistatus>"
+}
+
+fn parse_components(components: List(String)) -> List(VComponent) {
+  let body = calendars_response_with_components(components)
+  let resp = response.Response(status: 0, headers: [], body:)
+  let assert Ok([calendar]) = calendar.parse_calendars(resp)
+  calendar.components
+}
+
+pub fn unknown_component_is_ignored_test() {
+  parse_components(["VTODO", "VAVAILABLE"]) |> should.equal([VTask])
+}
+
+pub fn known_components_are_kept_test() {
+  parse_components(["VTODO", "VEVENT"]) |> should.equal([VTask, VEvent])
+}
+
+pub fn all_unknown_components_yields_none_test() {
+  parse_components(["VAVAILABLE"]) |> should.equal([])
+}
+
+/// A server is allowed to send the element with nothing in it, which is what a
+/// Nextcloud does for at least one calendar.
+pub fn empty_component_set_test() {
+  parse_components([]) |> should.equal([])
 }
 
 fn empty_task() {

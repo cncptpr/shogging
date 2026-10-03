@@ -44,7 +44,7 @@
 
             nativeBuildInputs = with pkgs; [
               nodejs
-              erlang
+              beamPackages.erlang
               beamPackages.rebar3
               bun
               tailwindcss_4

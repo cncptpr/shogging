@@ -176,20 +176,66 @@ fn decode_tasks_propstat() {
 
 pub fn parse_ical(t: #(TaskMeta, String)) -> Result(Task, String) {
   let #(meta, data) = t
-  let lines =
-    data
-    |> string.split("\n")
-    |> list.map(string.trim)
-    |> list.filter(fn(l) { l != "" })
+  let lines = unfold(data)
 
   // TODO: Refactor entire ical parser
-  case list.filter(lines, fn(l) { string.starts_with(l, "BEGIN:") }) {
-    ["BEGIN:VCALENDAR", "BEGIN:VTODO", ..] -> {
-      let task_lines = lines |> list.drop_while(fn(l) { l != "BEGIN:VTODO" })
-      let task_content = find_task_content(task_lines, 0)
-      parse_task(task_content, Task(..empty_task(), meta:))
+  //
+  // The VTODO is looked for rather than expected in a fixed place: a server is
+  // free to put other components in the same calendar, most often a VTIMEZONE
+  // ahead of the todo.
+  case list.find(lines, fn(l) { l == "BEGIN:VTODO" }) {
+    Ok(_) ->
+      case list.contains(lines, "BEGIN:VCALENDAR") {
+        True -> {
+          let task_lines =
+            lines
+            |> list.drop_while(fn(l) { l != "BEGIN:VTODO" })
+            // The opening line is a delimiter rather than a property, so it is
+            // dropped rather than collected as one named `BEGIN`.
+            |> list.drop(1)
+          parse_task(find_task_content(task_lines, 0), Task(..empty_task(), meta:))
+        }
+        False -> Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
+      }
+    Error(Nil) -> Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
+  }
+}
+
+/// Undo RFC 5545 line folding, so that the rest of the parser sees one line per
+/// property.
+///
+/// A long line is broken by a newline followed by a single space or tab, and the
+/// continuation is part of the value that was folded — not a property of its
+/// own. This has to happen before anything splits on `:`, since a folded value
+/// can contain one.
+fn unfold(data: String) -> List(String) {
+  data
+  |> string.split("\n")
+  |> list.fold([], fn(unfolded, line) {
+    // A server sends CRLF, so the carriage return goes before anything else
+    // looks at the line.
+    let line = string.trim_end(line)
+    case unfolded {
+      [previous, ..rest] ->
+        case is_continuation(line) {
+          // The one space or tab that marks the fold is not part of the value.
+          True -> [previous <> string.drop_start(line, 1), ..rest]
+          False -> [line, ..unfolded]
+        }
+
+      [] -> [line]
     }
-    _ -> Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
+  })
+  |> list.reverse
+  |> list.filter(fn(l) { l != "" })
+}
+
+/// Whether a line carries on from the one before it, which RFC 5545 marks with
+/// a single leading space or tab.
+fn is_continuation(line: String) -> Bool {
+  case line {
+    "" -> False
+    _ -> string.starts_with(line, " ") || string.starts_with(line, "\t")
   }
 }
 
@@ -203,8 +249,20 @@ fn find_task_content(lines: List(String), idx: Int) -> List(String) {
 
 fn parse_ical_field(line: String) -> #(String, String) {
   case string.split_once(line, ":") {
-    Ok(#(key, value)) -> #(key, value)
+    Ok(#(key, value)) -> #(property_name(key), value)
     Error(Nil) -> #(line, "")
+  }
+}
+
+/// The name of a property, without any parameters.
+///
+/// A property may carry parameters, as in `SUMMARY;LANGUAGE=en:Buy milk`, so
+/// what precedes the colon is not always the name on its own. The parameters are
+/// of no interest here.
+fn property_name(key: String) -> String {
+  case string.split(key, ";") {
+    [name, ..] -> name
+    [] -> key
   }
 }
 

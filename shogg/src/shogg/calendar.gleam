@@ -135,6 +135,22 @@ fn decode_resource_type_tag(tag) {
   }
 }
 
+/// The components this app knows how to show tasks from.
+///
+/// A server is free to advertise others as well — availability and free/busy
+/// among them — so an unrecognised name is dropped rather than refused: a
+/// calendar that supports VTODOs alongside something else still supports VTODOs.
+/// `Error` is what `list.filter_map` drops, hence the error rather than an
+/// option; the same shape `decode_resource_type_tag` uses.
+fn vcomponent_of_name(name name) -> Result(VComponent, Nil) {
+  case name {
+    "VTODO" -> Ok(VTask)
+    "VEVENT" -> Ok(VEvent)
+    "VJOURNAL" -> Ok(VJournal)
+    _ -> Error(Nil)
+  }
+}
+
 fn decode_calendars_propstat() {
   use status <- decode_text_field("status")
   use <- bool.guard(
@@ -179,24 +195,22 @@ fn decode_calendars_propstat() {
     use supported_components <- decode.optional_field(
       "supported-calendar-component-set",
       None,
-      decode.field(
+      // A server may send the element with nothing in it, so `comp` is looked
+      // up optionally: an empty list rather than a failure to decode. Requiring
+      // it meant one such calendar took down the whole listing.
+      decode.optional_field(
         "comp",
+        [],
         decode_xml_list(decode.field(
           "$attrs",
-          decode.field("name", decode.string, decode.success)
-            |> decode.map(fn(name) {
-              case name {
-                "VTODO" -> VTask
-                "VEVENT" -> VEvent
-                "VJOURNAL" -> VJournal
-                _ -> panic as "Unknown component"
-              }
-            }),
+          decode.field("name", decode.string, decode.success),
           decode.success,
         )),
-        decode.success,
-      )
-        |> decode.map(Some),
+        fn(names) {
+          let components = names |> list.filter_map(vcomponent_of_name)
+          decode.success(Some(components))
+        },
+      ),
     )
     GetCalendarsProp(
       resource_types:,
