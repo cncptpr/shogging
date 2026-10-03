@@ -1,7 +1,0 @@
-{
-  "description": "This is only for tailwindcss to run, nothing else requires it.",
-  "dependencies": {
-    "@tailwindcss/cli": "^4.2.2",
-    "tailwindcss": "^4.2.2"
-  }
-}

@@ -1,0 +1,13 @@
+name = "shared"
+version = "1.0.0"
+
+# The WebSocket protocol spoken between the shogging frontend and backend.
+# This package deliberately depends on nothing but the stdlib and gleam_json so
+# that it compiles for both the Erlang (server) and JavaScript (client) targets.
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"

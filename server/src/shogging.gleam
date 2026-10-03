@@ -5,10 +5,10 @@ import gleam/int
 import gleam/list
 import gleam/result
 import gleam/string
-import lustre
+import gleam/time/duration
+import hub
 import mist
-import server_component
-import setup
+import router
 import shogg/calendar
 import shogg/client
 import shogg/task
@@ -30,20 +30,24 @@ pub fn main() {
   }
 
   let client =
-    client.new_client(scheme, host:, username:, password:)
+    client.new_client(scheme:, host:, username:, password:)
     |> client.set_io(hackney.send)
+
   let assert Ok(server) = client.fetch_server_info(client)
   let assert Ok(user) = client.fetch_user_info(client, server)
   let assert Ok(home_set) = client.fetch_calendar_home_set(client, user)
   let assert Ok(calendars) = calendar.fetch_calendars(client, home_set)
   let assert Ok(calendar) = calendars |> list.find(fn(c) { c.name == calendar })
   let assert Ok(tasks) = task.fetch_tasks(client, calendar)
-  let task_list = server_component.component()
-  let assert Ok(component) =
-    lustre.start_server_component(task_list, #(client, calendar, tasks, delay))
+
+  // The hub holds the todos and translates what the frontend asks for into
+  // CalDAV requests. Everything else the web server does is serve the bundle
+  // and shuttle WebSocket frames to and from it.
+  let assert Ok(hub_subject) =
+    hub.start(client, calendar, tasks, duration.seconds(delay))
 
   let assert Ok(_) =
-    setup.router(_, component)
+    router.router(_, hub_subject)
     |> mist.new
     |> mist.bind("0.0.0.0")
     |> mist.port(1234)

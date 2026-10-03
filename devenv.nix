@@ -12,16 +12,12 @@
     git
     radicale
     curl
+    # The frontend needs JS tooling: `bun` bundles the app, `tailwindcss_4`
+    # builds its stylesheet, `nodejs` runs `gleam test` for the client package.
+    bun
+    tailwindcss_4
+    nodejs
   ];
-
-  languages.javascript = {
-    enable = true;
-    directory = "${config.devenv.root}/server";
-    npm = {
-      enable = true;
-      install.enable = true;
-    };
-  };
 
   # CalDAV backend for local development. `processes.radicale` serves this on
   # localhost:5233 (5232 is already taken by another project on this machine)
@@ -42,27 +38,27 @@
       before = [ "devenv:processes:radicale" ];
     };
 
-    "server:tailwindcss" = {
-      description = "Build the tailwind css for the server";
-      cwd = "${config.devenv.root}/server";
-      exec = ''
-        if [ ! -d node_modules ] || [ package-lock.json -nt node_modules ]; then
-          npm ci
-        fi
-        ./node_modules/.bin/tailwindcss -i ./src/css/app.css -o ./priv/tailwind.css
-      '';
+    "client:dev" = {
+      description = "Run the frontend dev server for shogging";
+      cwd = "${config.devenv.root}/client";
+      exec = "gleam run -m lustre/dev start";
     };
 
     "server:dev" = {
       description = "Run the dev server for shogging";
       cwd = "${config.devenv.root}/server";
       exec = "gleam run";
-      after = [ "server:tailwindcss" ];
     };
 
     "shogg:test" = {
       description = "Run the tests for shogg";
       cwd = "${config.devenv.root}/shogg";
+      exec = "gleam test";
+    };
+
+    "shared:test" = {
+      description = "Run the tests for the shared websocket protocol";
+      cwd = "${config.devenv.root}/shared";
       exec = "gleam test";
     };
   };
