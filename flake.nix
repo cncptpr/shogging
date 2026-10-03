@@ -105,6 +105,8 @@
                 credentials and the port it listens on from the environment; see
                 `config.gleam`.
               '';
+
+              mainProgram = "shogging";
               platforms = lib.platforms.unix;
             };
           };
@@ -267,19 +269,8 @@
                   StateDirectory = cfg.user;
 
                   EnvironmentFile = cfg.caldav.passwordFile;
-                };
 
-                environment = {
-                  SHOGGING_PORT = toString cfg.port;
-                  CHECK_CHANGE_DELAY = toString cfg.checkChangeDelay;
-                  SHOGGING_MOTTO = cfg.motto;
-                  CALDAV_HOST = cfg.caldav.host;
-                  CALDAV_USERNAME = cfg.caldav.username;
-                  CALDAV_CALENDAR = cfg.caldav.calendar;
-                }
-                // cfg.extraEnvironment;
-
-                security = {
+                  # Hardening.
                   NoNewPrivileges = true;
                   PrivateTmp = true;
                   PrivateDevices = true;
@@ -310,6 +301,17 @@
                     "~@resources"
                   ];
                 };
+
+                environment = {
+                  SHOGGING_PORT = toString cfg.port;
+                  CHECK_CHANGE_DELAY = toString cfg.checkChangeDelay;
+                  SHOGGING_MOTTO = cfg.motto;
+                  CALDAV_HOST = cfg.caldav.host;
+                  CALDAV_USERNAME = cfg.caldav.username;
+                  CALDAV_CALENDAR = cfg.caldav.calendar;
+                }
+                // cfg.extraEnvironment;
+
               };
 
               networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.port ];
