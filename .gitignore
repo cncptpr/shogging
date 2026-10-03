@@ -11,3 +11,4 @@ devenv.local.yaml
 
 # Frontend build output (produced by `gleam run -m lustre/dev build`)
 server/priv/static/
+result
