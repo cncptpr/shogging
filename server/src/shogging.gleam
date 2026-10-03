@@ -4,6 +4,7 @@ import gleam/hackney
 import gleam/int
 import gleam/list
 import gleam/result
+import gleam/string
 import lustre
 import mist
 import server_component
@@ -13,15 +14,23 @@ import shogg/client
 import shogg/task
 
 pub fn main() {
-  let assert Ok(host) = envoy.get("CALDAV_HOST")
+  let assert Ok(raw_host) = envoy.get("CALDAV_HOST")
   let assert Ok(username) = envoy.get("CALDAV_USERNAME")
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
   let assert Ok(calendar) = envoy.get("CALDAV_CALENDAR")
   let assert Ok(delay) =
     envoy.get("CHECK_CHANGE_DELAY") |> result.try(int.parse)
 
+  // The scheme is inferred from CALDAV_HOST: an explicit "http://" prefix
+  // selects plain HTTP (the local dev server), anything else is HTTPS.
+  let #(scheme, host) = case string.split_once(raw_host, "://") {
+    Ok(#("http", rest)) -> #(client.http, rest)
+    Ok(#("https", rest)) -> #(client.https, rest)
+    _ -> #(client.https, raw_host)
+  }
+
   let client =
-    client.new_client(client.https, host:, username:, password:)
+    client.new_client(scheme, host:, username:, password:)
     |> client.set_io(hackney.send)
   let assert Ok(server) = client.fetch_server_info(client)
   let assert Ok(user) = client.fetch_user_info(client, server)

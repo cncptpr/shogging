@@ -1,9 +1,9 @@
 import argv
 import envoy
 import gleam/hackney
-import gleam/http
 import gleam/io
 import gleam/list
+import gleam/string
 import shogg/calendar
 import shogg/client
 import shogg/task
@@ -20,13 +20,21 @@ pub fn main() {
 }
 
 fn run_example(backend: String) {
-  let assert Ok(host) = envoy.get("CALDAV_HOST")
+  let assert Ok(raw_host) = envoy.get("CALDAV_HOST")
   let assert Ok(username) = envoy.get("CALDAV_USERNAME")
   let assert Ok(password) = envoy.get("CALDAV_PASSWORD")
   let assert Ok(calendar_name) = envoy.get("CALDAV_CALENDAR")
 
+  // The scheme is inferred from CALDAV_HOST: an explicit "http://" prefix
+  // selects plain HTTP (the local dev server), anything else is HTTPS.
+  let #(scheme, host) = case string.split_once(raw_host, "://") {
+    Ok(#("http", rest)) -> #(client.http, rest)
+    Ok(#("https", rest)) -> #(client.https, rest)
+    _ -> #(client.https, raw_host)
+  }
+
   let client =
-    client.new_client(http.Https, host:, username:, password:)
+    client.new_client(scheme, host:, username:, password:)
     |> client.set_io(hackney.send)
 
   let assert Ok(_) = simplifile.create_directory_all(responses_path <> backend)
