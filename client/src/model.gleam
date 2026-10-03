@@ -30,6 +30,8 @@ pub type Model {
     socket: Option(WebSocket),
     queue: List(String),
     retries: Int,
+    /// Per-deployment, read once out of the page at startup; see `config.gleam`.
+    motto: String,
   )
 }
 
@@ -68,6 +70,6 @@ pub fn reconnect_delay(retries: Int) -> Int {
     1 -> 2000
     2 -> 4000
     3 -> 8000
-    _ -> 15000
+    _ -> 15_000
   }
 }

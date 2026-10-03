@@ -40,10 +40,12 @@ pub fn client_messages_survive_tricky_strings_test() {
 pub fn server_messages_round_trip_test() {
   assert server_round_trips(ActionFailed(message: "CalDAV said no"))
   assert server_round_trips(Todos([]))
-  assert server_round_trips(Todos([
-    Todo(id: "uid-1", summary: "Buy milk", completed: False),
-    Todo(id: "uid-2", summary: "Ship the frontend", completed: True),
-  ]))
+  assert server_round_trips(
+    Todos([
+      Todo(id: "uid-1", summary: "Buy milk", completed: False),
+      Todo(id: "uid-2", summary: "Ship the frontend", completed: True),
+    ]),
+  )
 }
 
 pub fn unknown_client_events_are_rejected_test() {

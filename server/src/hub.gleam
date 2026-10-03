@@ -92,20 +92,20 @@ fn handle(state: State, msg: Msg) -> actor.Next(State, Msg) {
   case msg {
     Subscribe(subject) -> {
       process.send(subject, api.Todos(to_todos(state.tasks)))
-      actor.continue(State(
-        ..state,
-        subscribers: [subject, ..state.subscribers],
-      ))
+      actor.continue(
+        State(..state, subscribers: [subject, ..state.subscribers]),
+      )
     }
 
     Unsubscribe(subject) ->
-      actor.continue(State(
-        ..state,
-        subscribers: list.filter(
-          state.subscribers,
-          fn(subscriber) { subscriber != subject },
+      actor.continue(
+        State(
+          ..state,
+          subscribers: list.filter(state.subscribers, fn(subscriber) {
+            subscriber != subject
+          }),
         ),
-      ))
+      )
 
     Event(event, reply_to) ->
       actor.continue(handle_event(state, event, reply_to))
@@ -149,9 +149,7 @@ fn handle_event(
             task.Task(
               ..item,
               status: Some("COMPLETED"),
-              completed: Some(
-                timestamp.system_time() |> task.format_cal_date,
-              ),
+              completed: Some(timestamp.system_time() |> task.format_cal_date),
             )
           False ->
             task.Task(..item, status: Some("NEEDS-ACTION"), completed: None)
@@ -202,7 +200,8 @@ fn delete_todo(
         reply_to,
         Error(shogg.ParseError("There is no todo with id " <> id)),
       )
-    Ok(item) -> mutate(state, reply_to, task.send_delete_task(state.client, item))
+    Ok(item) ->
+      mutate(state, reply_to, task.send_delete_task(state.client, item))
   }
 }
 
@@ -241,9 +240,7 @@ fn refresh(state: State) -> State {
 }
 
 fn broadcast(state: State, msg: api.ServerMsg) -> Nil {
-  list.each(state.subscribers, fn(subscriber) {
-    process.send(subscriber, msg)
-  })
+  list.each(state.subscribers, fn(subscriber) { process.send(subscriber, msg) })
 }
 
 fn find_task(tasks: List(Task), id: String) -> Result(Task, Nil) {
@@ -266,10 +263,7 @@ fn to_todos(tasks: List(Task)) -> List(api.Todo) {
 fn sort_tasks(tasks: List(Task)) -> List(Task) {
   tasks
   |> list.sort(fn(a, b) {
-    string.compare(
-      option.unwrap(a.summary, ""),
-      option.unwrap(b.summary, ""),
-    )
+    string.compare(option.unwrap(a.summary, ""), option.unwrap(b.summary, ""))
   })
   |> list.sort(fn(a, b) {
     case a.x_apple_sort_order, b.x_apple_sort_order {

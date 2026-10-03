@@ -1,3 +1,4 @@
+import config
 import envoy
 import gleam/erlang/process
 import gleam/hackney
@@ -6,6 +7,7 @@ import gleam/list
 import gleam/result
 import gleam/string
 import gleam/time/duration
+import html
 import hub
 import mist
 import router
@@ -46,8 +48,13 @@ pub fn main() {
   let assert Ok(hub_subject) =
     hub.start(client, calendar, tasks, duration.seconds(delay))
 
+  // The page is rendered once, here, rather than per request: it is the host
+  // document for a static bundle, and the only thing in it that varies is the
+  // configuration, which is read once for the lifetime of the process.
+  let page = config.from_env() |> html.render()
+
   let assert Ok(_) =
-    router.router(_, hub_subject)
+    router.router(_, hub_subject, page)
     |> mist.new
     |> mist.bind("0.0.0.0")
     |> mist.port(1234)

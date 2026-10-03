@@ -6,8 +6,8 @@ import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
 import gleam/io
 import gleam/option.{type Option, Some}
-import mist
 import hub
+import mist
 import shared/api
 
 /// Upgrade `request` to a WebSocket. Every tab gets its own socket and its own
@@ -65,10 +65,7 @@ fn loop(
     // A message for the browser, sent by the hub via our subject.
     mist.Custom(server_msg) -> {
       let assert Ok(_) =
-        mist.send_text_frame(
-          connection,
-          api.server_msg_to_string(server_msg),
-        )
+        mist.send_text_frame(connection, api.server_msg_to_string(server_msg))
 
       mist.continue(state)
     }

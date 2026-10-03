@@ -4,7 +4,10 @@
 //// Every user action is applied optimistically to the local todos and then
 //// mirrored to the server. The server always answers with a fresh `Todos`
 //// broadcast, which is what keeps several browser tabs honest.
+//// The whole app is a sheet of paper. Everything else only arranges things on
+//// it; the colour, the grain and the doodled outlines live in `client.css`.
 
+import config
 import gleam/javascript/promise
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -27,8 +30,7 @@ import shared/api.{type ClientMsg, type Todo, Todo}
 import ui/dialog
 import ui/task_list
 
-const page_classes =
-  "min-h-screen bg-[#f7efd7] text-amber-950 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.55),rgba(255,255,255,0.1)),repeating-linear-gradient(0deg,rgba(148,120,88,0.08)_0,rgba(148,120,88,0.08)_1px,transparent_1px,transparent_28px),repeating-linear-gradient(90deg,rgba(148,120,88,0.08)_0,rgba(148,120,88,0.08)_1px,transparent_1px,transparent_28px)]"
+const page_classes = "page"
 
 pub fn app() -> lustre.App(Nil, Model, Msg) {
   lustre.application(init, update, view)
@@ -45,6 +47,7 @@ fn init(_) -> #(Model, Effect(Msg)) {
       socket: None,
       queue: [],
       retries: 0,
+      motto: config.motto(),
     )
 
   #(model, lustre_websocket.init("/ws", WsEvent))
@@ -78,12 +81,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     }
 
     UserToggled(id, completed) -> {
-      let model = Model(
-        ..model,
-        todos: replace_todo(model.todos, id, fn(item) {
-          Todo(..item, completed:)
-        }),
-      )
+      let model =
+        Model(
+          ..model,
+          todos: replace_todo(model.todos, id, fn(item) {
+            Todo(..item, completed:)
+          }),
+        )
       send(model, api.ToggleTodo(id, completed))
     }
 
@@ -105,7 +109,8 @@ fn handle_ws_event(
   event: WebSocketEvent,
 ) -> #(Model, Effect(Msg)) {
   case event {
-    lustre_websocket.InvalidUrl -> panic as "the websocket path is hardcoded and valid"
+    lustre_websocket.InvalidUrl ->
+      panic as "the websocket path is hardcoded and valid"
 
     lustre_websocket.OnOpen(socket) -> #(
       Model(
@@ -135,7 +140,9 @@ fn handle_ws_event(
 }
 
 fn flush(socket: WebSocket, queue: List(String)) -> Effect(Msg) {
-  effect.batch(list.map(queue, fn(payload) { lustre_websocket.send(socket, payload) }))
+  effect.batch(
+    list.map(queue, fn(payload) { lustre_websocket.send(socket, payload) }),
+  )
 }
 
 fn schedule_reconnect(delay: Int) -> Effect(Msg) {
@@ -179,14 +186,15 @@ fn submit(model: Model) -> #(Model, Effect(Msg)) {
     }
     RenameDialog(_), "" -> #(model, effect.none())
     RenameDialog(id), summary -> {
-      let model = Model(
-        ..model,
-        dialog: NoDialog,
-        draft: "",
-        todos: replace_todo(model.todos, id, fn(item) {
-          Todo(..item, summary:)
-        }),
-      )
+      let model =
+        Model(
+          ..model,
+          dialog: NoDialog,
+          draft: "",
+          todos: replace_todo(model.todos, id, fn(item) {
+            Todo(..item, summary:)
+          }),
+        )
       send(model, api.RenameTodo(id, summary))
     }
     NoDialog, _ -> #(model, effect.none())
@@ -216,7 +224,7 @@ fn remove_todo(todos: List(Todo), id: String) -> List(Todo) {
 
 fn view(model: Model) -> Element(Msg) {
   html.div([class(page_classes)], [
-    task_list.view(model.todos, model.connection),
+    task_list.view(model.todos, model.connection, model.motto),
     dialog.view(model.dialog, model.draft),
     view_error(model.error),
   ])
@@ -226,20 +234,17 @@ fn view_error(error: Option(String)) -> Element(Msg) {
   case error {
     None -> element.none()
     Some(message) ->
-      html.div([class("fixed right-6 bottom-6 z-40 flex items-center gap-3")], [
-        html.p(
-          [
-            class("rounded-xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-medium text-amber-950 shadow-[0_6px_16px_rgba(120,70,30,0.18)]"),
-          ],
-          [html.text(message)],
-        ),
+      // The error is a scrap of paper stuck in the corner of the page, not a
+      // toast: same paper, same pen, just tilted a little.
+      html.div([class("fixed right-6 bottom-6 z-40 flex items-end gap-3")], [
+        html.p([class("note max-w-72 py-4 pr-6")], [html.text(message)]),
         html.button(
           [
-            class("rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-800"),
+            class("btn"),
             attribute.type_("button"),
             event.on_click(UserDismissedError),
           ],
-          [html.text("Dismiss")],
+          [html.text("shove it")],
         ),
       ])
   }

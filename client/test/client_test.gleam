@@ -1,6 +1,6 @@
+import gleam/list
 import gleeunit
 import gleeunit/should
-import gleam/list
 import model.{queue_push, reconnect_delay}
 import shared/api
 
@@ -29,8 +29,8 @@ pub fn reconnect_delay_backoff_test() {
   reconnect_delay(1) |> should.equal(2000)
   reconnect_delay(2) |> should.equal(4000)
   reconnect_delay(3) |> should.equal(8000)
-  reconnect_delay(4) |> should.equal(15000)
-  reconnect_delay(99) |> should.equal(15000)
+  reconnect_delay(4) |> should.equal(15_000)
+  reconnect_delay(99) |> should.equal(15_000)
 }
 
 pub fn server_msg_decodes_todos_test() {

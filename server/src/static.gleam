@@ -33,10 +33,15 @@ pub fn serve(path: List(String)) -> Response(mist.ResponseData) {
         [] -> "index.html"
         _ -> string.join(path, "/")
       }
-      let assert Ok(priv_directory) =
-        application.priv_directory("shogging")
+      let assert Ok(priv_directory) = application.priv_directory("shogging")
 
-      case mist.send_file(priv_directory <> "/static/" <> file, offset: 0, limit: None) {
+      case
+        mist.send_file(
+          priv_directory <> "/static/" <> file,
+          offset: 0,
+          limit: None,
+        )
+      {
         Ok(body) ->
           response.new(200)
           |> response.prepend_header("content-type", content_type(file))
@@ -56,10 +61,7 @@ fn is_safe(path: List(String)) -> Bool {
 }
 
 fn content_type(file: String) -> String {
-  case list.find(
-    content_types,
-    fn(entry) { string.ends_with(file, entry.0) },
-  ) {
+  case list.find(content_types, fn(entry) { string.ends_with(file, entry.0) }) {
     Ok(entry) -> entry.1
     Error(Nil) -> "application/octet-stream"
   }

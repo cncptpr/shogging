@@ -256,7 +256,10 @@ fn responses_to_calendar(responses: List(GetCalendarsResponse)) {
   })
 }
 
-pub fn changed_request(client: Client(_), calendar: Calendar) -> Request(String) {
+pub fn changed_request(
+  client: Client(_),
+  calendar: Calendar,
+) -> Request(String) {
   let request_body =
     "<d:propfind xmlns:d=\"DAV:\" xmlns:cs=\"http://calendarserver.org/ns/\">
       <d:prop>
