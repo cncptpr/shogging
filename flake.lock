@@ -1,0 +1,49 @@
+{
+  "nodes": {
+    "nix-gleam": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791059599,
+        "narHash": "sha256-bEgGLbFub1q1L0brRpDRrwPSAvvCLgF4TG7EjvdcDPw=",
+        "owner": "cncptpr",
+        "repo": "nix-gleam",
+        "rev": "9d259a6b9fb4cae338a5dad5ca5d1d4e96a8f529",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cncptpr",
+        "ref": "fix/local-packages",
+        "repo": "nix-gleam",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1790822859,
+        "narHash": "sha256-69xHQhAeMAD2wDXO7T2pcOZIF9Sga2W+JkmY2a11Ops=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c59305bab2065cfecc4944690d9eedbb56f3a9fa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nix-gleam": "nix-gleam",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

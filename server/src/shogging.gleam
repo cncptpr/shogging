@@ -48,16 +48,18 @@ pub fn main() {
   let assert Ok(hub_subject) =
     hub.start(client, calendar, tasks, duration.seconds(delay))
 
-  // The page is rendered once, here, rather than per request: it is the host
-  // document for a static bundle, and the only thing in it that varies is the
-  // configuration, which is read once for the lifetime of the process.
-  let page = config.from_env() |> html.render()
+  // The configuration is read once, here, rather than per request: the page is
+  // the host document for a static bundle and the port belongs to the listener,
+  // so both are fixed for the lifetime of the process. Named `cfg` rather than
+  // `config` so that it does not shadow the module.
+  let cfg = config.from_env()
+  let page = html.render(cfg)
 
   let assert Ok(_) =
     router.router(_, hub_subject, page)
     |> mist.new
     |> mist.bind("0.0.0.0")
-    |> mist.port(1234)
+    |> mist.port(cfg.port)
     |> mist.start
 
   process.sleep_forever()
