@@ -357,9 +357,9 @@ pub fn full_task_round_trip_test() {
 
 // --- Known weaknesses ---------------------------------------------------------
 
-/// A `VERSION` inside the VTODO is invalid ical, but the parser should
-/// reject it with an error rather than crash: `parse_task` pattern matches
-/// the value with `let assert "2.0"` and panics on anything else.
+/// A `VERSION` inside the VTODO is invalid ical, so the parser rejects it
+/// with an error: only `VERSION:2.0` is accepted, anything else fails the
+/// task instead of crashing.
 pub fn version_other_than_2_inside_vtodo_test() {
   let ical = vcalendar("BEGIN:VTODO\r\nUID:1\r\nVERSION:1.0\r\nEND:VTODO\r\n")
 

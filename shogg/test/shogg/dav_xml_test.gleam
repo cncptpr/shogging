@@ -640,9 +640,8 @@ pub fn user_info_ignores_propstat_status_test() {
 }
 
 /// A multistatus with exactly one response is a plain dict rather than a
-/// list, and `user_info_decoder` only asks for a list — unlike its calendar
-/// home-set sibling, which accepts both. This test pins the behaviour that
-/// should hold: the single response parses.
+/// list; the decoder accepts both shapes, just like its calendar home-set
+/// sibling.
 pub fn user_info_single_response_test() {
   let body =
     multistatus(dav_response(

@@ -193,7 +193,10 @@ pub fn parse_ical(t: #(TaskMeta, String)) -> Result(Task, String) {
             // The opening line is a delimiter rather than a property, so it is
             // dropped rather than collected as one named `BEGIN`.
             |> list.drop(1)
-          parse_task(find_task_content(task_lines, 0), Task(..empty_task(), meta:))
+          parse_task(
+            find_task_content(task_lines, 0),
+            Task(..empty_task(), meta:),
+          )
         }
         False -> Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
       }
@@ -290,10 +293,11 @@ fn parse_task(lines: List(String), parsed: Task) -> Result(Task, String) {
     [line, ..rest] -> {
       use new_parsed <- result.try(parse_task(rest, parsed))
       case parse_ical_field(line) {
-        #("VERSION", _) -> {
-          let assert "2.0" = line |> string.replace("VERSION:", "")
-          Ok(new_parsed)
-        }
+        #("VERSION", value) ->
+          case value {
+            "2.0" -> Ok(new_parsed)
+            _ -> Error("Unsupported VERSION: " <> value)
+          }
         #("UID", value) -> Ok(Task(..new_parsed, uid: value))
         #("DTSTAMP", value) -> Ok(Task(..new_parsed, dtstamp: value))
         #("CREATED", value) -> Ok(Task(..new_parsed, created: Some(value)))
