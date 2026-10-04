@@ -179,6 +179,27 @@ pub fn percent_complete_must_be_a_number_test() {
   parse(ical) |> should.be_error()
 }
 
+/// Apple sets `PERCENT-COMPLETE:100` and looks at it before `STATUS`, so such
+/// a task has to count as completed even when the status still says otherwise.
+pub fn percent_complete_100_is_completed_test() {
+  let ical =
+    vcalendar(
+      "BEGIN:VTODO\r\nUID:1\r\nSTATUS:NEEDS-ACTION\r\nPERCENT-COMPLETE:100\r\nEND:VTODO\r\n",
+    )
+
+  let assert Ok(parsed) = parse(ical)
+  task.is_competed(parsed) |> should.be_true()
+}
+
+/// Anything below 100 is work in progress, not a finished task.
+pub fn partial_percent_complete_is_not_completed_test() {
+  let ical =
+    vcalendar("BEGIN:VTODO\r\nUID:1\r\nPERCENT-COMPLETE:50\r\nEND:VTODO\r\n")
+
+  let assert Ok(parsed) = parse(ical)
+  task.is_competed(parsed) |> should.be_false()
+}
+
 pub fn no_vtodo_test() {
   let ical = vcalendar("BEGIN:VEVENT\r\nUID:1\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n")
 

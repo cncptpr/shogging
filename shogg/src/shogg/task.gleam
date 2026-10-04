@@ -67,6 +67,9 @@ pub fn format_cal_date(now: Timestamp) {
 
 pub fn is_competed(task) {
   case task {
+    // Apple reads PERCENT-COMPLETE before it reads STATUS, so a task that is
+    // fully counted is done as far as Reminders is concerned.
+    Task(percent_complete: Some(100), ..) -> True
     Task(status: Some("COMPLETED"), ..) -> True
     Task(status: None, completed: Some(_), ..) -> True
     _ -> False

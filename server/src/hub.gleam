@@ -150,9 +150,15 @@ fn handle_event(
               ..item,
               status: Some("COMPLETED"),
               completed: Some(timestamp.system_time() |> task.format_cal_date),
+              percent_complete: Some(100),
             )
           False ->
-            task.Task(..item, status: Some("NEEDS-ACTION"), completed: None)
+            task.Task(
+              ..item,
+              status: Some("NEEDS-ACTION"),
+              completed: None,
+              percent_complete: None,
+            )
         }
       })
 
