@@ -1,0 +1,25 @@
+HTTP/1.1 412 Precondition failed
+Host: 127.0.0.1:8081
+Date: Sun, 04 Oct 2026 11:44:23 GMT
+Connection: close
+X-Powered-By: PHP/8.4.25
+Set-Cookie: oc_sessionPassphrase=64dwgdVeXVGH2y60%2BvMWxYXVmPdmmQ3gwj%2BOee%2FU8UybyJrErNlpkBA%2BG8qJC1A81FqeHsYXS4G39aELD3fEsSUyCPVzodaxyOFblBNMdhLqmDr3apTyoqjHHiiUoL6H; path=/; HttpOnly; SameSite=Lax
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-Robots-Tag: noindex, nofollow
+Set-Cookie: nc_sameSiteCookielax=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=lax
+Set-Cookie: nc_sameSiteCookiestrict=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=strict
+Content-Security-Policy: default-src 'none';
+Set-Cookie: oc8s8ddag8nx=329eeae717a76413049c6eef62986580; path=/; HttpOnly; SameSite=Lax
+Set-Cookie: cookie_test=test; expires=Sun, 04 Oct 2026 12:44:23 GMT; Max-Age=3600
+X-User-Id: shogging
+Content-Type: application/xml; charset=utf-8
+
+<?xml version="1.0" encoding="utf-8"?>
+<d:error xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns">
+  <s:exception>Sabre\DAV\Exception\PreconditionFailed</s:exception>
+  <s:message>An If-Match header was specified and the resource did not exist</s:message>
+  <s:header>If-Match</s:header>
+</d:error>

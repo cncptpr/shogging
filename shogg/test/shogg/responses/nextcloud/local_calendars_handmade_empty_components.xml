@@ -1,0 +1,2 @@
+<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/"><d:response><d:href>/remote.php/dav/calendars/shogging/handmade-empty/</d:href><d:propstat><d:prop><d:resourcetype><d:collection/><cal:calendar/></d:resourcetype><d:displayname>Handmade Empty</d:displayname><cs:getctag>http://sabre.io/ns/sync/42</cs:getctag><cal:supported-calendar-component-set/></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>

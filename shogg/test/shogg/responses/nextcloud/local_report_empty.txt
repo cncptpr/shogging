@@ -1,0 +1,23 @@
+HTTP/1.1 207 Multi-Status
+Host: 127.0.0.1:8081
+Date: Sun, 04 Oct 2026 11:44:22 GMT
+Connection: close
+X-Powered-By: PHP/8.4.25
+Set-Cookie: oc_sessionPassphrase=oBg%2FDQXJjyXKKEB2ppZzTuOj5ep5R1aAU%2FGaulbzdX48KLHNds8trV0q%2BT7pb603oeKMGdFuwALBwSWQrs3icAfCzaUJIw1TTDbxwlg1nXWhEeMgvPs2Y7jXWkWQlxd2; path=/; HttpOnly; SameSite=Lax
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-Robots-Tag: noindex, nofollow
+Set-Cookie: nc_sameSiteCookielax=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=lax
+Set-Cookie: nc_sameSiteCookiestrict=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=strict
+Content-Security-Policy: default-src 'none';
+Set-Cookie: oc8s8ddag8nx=b723ada718b95a60e3e1097f51997e7f; path=/; HttpOnly; SameSite=Lax
+Set-Cookie: cookie_test=test; expires=Sun, 04 Oct 2026 12:44:22 GMT; Max-Age=3600
+X-User-Id: shogging
+Content-Type: application/xml; charset=utf-8
+Vary: Brief,Prefer
+X-Request-Id: MUsmiJWqufcddI2uVqYh
+
+<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns"/>

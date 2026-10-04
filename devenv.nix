@@ -66,4 +66,65 @@
   processes.radicale = {
     exec = ''bash "${config.devenv.root}/dev/radicale-start.sh"'';
   };
+
+  # A local Nextcloud for capturing real CalDAV responses into
+  # shogg/test/shogg/responses/nextcloud/ (the `nextcloud:capture` task).
+  # Activated separately with `devenv --profile nextcloud ...` so the default
+  # shell keeps only Radicale. State (config, sqlite, data) lives in
+  # $DEVENV_STATE/nextcloud; the server itself comes from the read-only store
+  # and is served by PHP's built-in dev server with dev/nextcloud-router.php
+  # standing in for the .htaccess URL rewriting.
+  profiles.nextcloud.module =
+    { pkgs, config, ... }:
+    {
+      packages = [
+        pkgs.nextcloud34
+        pkgs.php84
+      ];
+
+      env = {
+        NEXTCLOUD_HOST = "http://127.0.0.1:8081";
+        NEXTCLOUD_USERNAME = "shogging";
+        NEXTCLOUD_PASSWORD = "shogging";
+        NEXTCLOUD_CALENDAR = "Shogging Test";
+        NEXTCLOUD_ROOT = "${pkgs.nextcloud34}";
+      };
+
+      tasks = {
+        # Offline `occ maintenance:install`; runs before the server starts so
+        # a fresh `devenv --profile nextcloud up` is usable out of the box.
+        "nextcloud:install" = {
+          description = "Install the local Nextcloud instance into $DEVENV_STATE";
+          status = ''test -f "$DEVENV_STATE/nextcloud/config/config.php"'';
+          exec = ''bash "${config.devenv.root}/dev/nextcloud-install.sh"'';
+          before = [ "devenv:processes:nextcloud" ];
+        };
+
+        # Seed over HTTP, so it waits until the process reports ready. Only
+        # runs when invoked directly (it is downstream of the process).
+        "nextcloud:seed" = {
+          description = "Create the test calendars and upload the sample tasks";
+          status = ''test -f "$DEVENV_STATE/nextcloud/.seeded"'';
+          exec = ''bash "${config.devenv.root}/dev/nextcloud-seed.sh"'';
+          after = [ "devenv:processes:nextcloud" ];
+        };
+
+        # Pulls in the server (and install + seed) as dependencies, so
+        # `devenv --profile nextcloud tasks run nextcloud:capture` captures
+        # everything from a cold start.
+        "nextcloud:capture" = {
+          description = "Capture local_* CalDAV response fixtures for the shogg tests";
+          exec = ''bash "${config.devenv.root}/dev/nextcloud-capture.sh"'';
+          after = [ "nextcloud:seed" ];
+        };
+      };
+
+      processes.nextcloud = {
+        exec = ''bash "${config.devenv.root}/dev/nextcloud-start.sh"'';
+        ready.http.get = {
+          port = 8081;
+          path = "/status.php";
+        };
+      };
+    };
 }

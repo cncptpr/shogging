@@ -1,0 +1,8 @@
+HTTP/1.1 301 Moved Permanently
+Host: 127.0.0.1:8081
+Date: Sun, 04 Oct 2026 11:44:21 GMT
+Connection: close
+X-Powered-By: PHP/8.4.25
+Location: /remote.php/dav/
+Content-type: text/html; charset=UTF-8
+

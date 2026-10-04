@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav"><d:response><d:href>/remote.php/dav/calendars/shogging/shogging-test/handmade-escaped.ics</d:href><d:propstat><d:prop><d:getetag>&quot;handmade-escaped-etag&quot;</d:getetag><cal:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Shogg//EN
+BEGIN:VTIMEZONE
+TZID:Europe/Berlin
+BEGIN:STANDARD
+DTSTART:19701025T030000
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VTODO
+UID:handmade-escaped
+DTSTAMP:20261004T090000Z
+STATUS:COMPLETED
+PERCENT-COMPLETE:100
+X-APPLE-SORT-ORDER:7
+SUMMARY:Cafe\, cream \; and \\ snowman ☃ — actu
+ al nice café
+END:VTODO
+END:VCALENDAR
+</cal:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>

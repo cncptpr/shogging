@@ -1,0 +1,23 @@
+HTTP/1.1 201 Created
+Host: 127.0.0.1:8081
+Date: Sun, 04 Oct 2026 11:44:23 GMT
+Connection: close
+X-Powered-By: PHP/8.4.25
+Set-Cookie: oc_sessionPassphrase=mo5E66IXR1mt2rIKYpwOOSHkGoGo6a6O4vJfTZMkChvg6qPwp6MbaFdLihtZFz25gqghANckdaT21nM%2FZtx2GIa4OjAAGTr9NtTsMwpo%2Bwp%2BMOhf5l2dEj%2BotM9L%2FE3L; path=/; HttpOnly; SameSite=Lax
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-Robots-Tag: noindex, nofollow
+Set-Cookie: nc_sameSiteCookielax=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=lax
+Set-Cookie: nc_sameSiteCookiestrict=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=strict
+Content-Security-Policy: default-src 'none';
+Set-Cookie: oc8s8ddag8nx=261b705306a2db85d110e31e33c429d2; path=/; HttpOnly; SameSite=Lax
+Set-Cookie: cookie_test=test; expires=Sun, 04 Oct 2026 12:44:23 GMT; Max-Age=3600
+X-User-Id: shogging
+Content-Length: 0
+ETag: "5979e996b828bb1a7c247ffbc82910c8"
+X-Request-Id: KW1VhXYCovWDJH06daE0
+OC-ETag: "5979e996b828bb1a7c247ffbc82910c8"
+Content-type: text/html; charset=UTF-8
+

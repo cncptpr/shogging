@@ -1,0 +1,26 @@
+HTTP/1.1 412 Precondition failed
+Host: 127.0.0.1:8081
+Date: Sun, 04 Oct 2026 11:44:23 GMT
+Connection: close
+X-Powered-By: PHP/8.4.25
+Set-Cookie: oc_sessionPassphrase=mYun8hPUs6cLkMJymPntFayxDxkLLjUt7m%2F0lYbDuDVjSeg0Vf2BbAXR9k7yAdytOe%2BdSDodi6JMG6g38Xnhr4zBJfez7UZaEv7sCSZ8J0G%2FQODr5ghmqBX4vmBQ%2BXal; path=/; HttpOnly; SameSite=Lax
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-Robots-Tag: noindex, nofollow
+Set-Cookie: nc_sameSiteCookielax=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=lax
+Set-Cookie: nc_sameSiteCookiestrict=true; path=/; httponly;expires=Fri, 31-Dec-2100 23:59:59 GMT; SameSite=strict
+Content-Security-Policy: default-src 'none';
+Set-Cookie: oc8s8ddag8nx=3179d66e0696802caaa830ccd6bcc2bb; path=/; HttpOnly; SameSite=Lax
+Set-Cookie: cookie_test=test; expires=Sun, 04 Oct 2026 12:44:23 GMT; Max-Age=3600
+X-User-Id: shogging
+ETag: "9b7c36af2daf045ff03399d757f0a635"
+Content-Type: application/xml; charset=utf-8
+
+<?xml version="1.0" encoding="utf-8"?>
+<d:error xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns">
+  <s:exception>Sabre\DAV\Exception\PreconditionFailed</s:exception>
+  <s:message>An If-Match header was specified, but none of the specified ETags matched.</s:message>
+  <s:header>If-Match</s:header>
+</d:error>
