@@ -56,6 +56,11 @@
       exec = "gleam test";
     };
 
+    "shogg:integration-test" = {
+      description = "Run shogg's integration tests against a local Radicale";
+      exec = ''bash "${config.devenv.root}/dev/shogg-integration-test.sh"'';
+    };
+
     "shared:test" = {
       description = "Run the tests for the shared websocket protocol";
       cwd = "${config.devenv.root}/shared";
