@@ -107,3 +107,14 @@ pub fn parse_user_info_single_response_test() {
   info
   |> should.equal(client.UserInfo("/remote.php/dav/principals/users/shogging/"))
 }
+
+/// The other shape of the same coin: the real home-set capture is a single
+/// response, so this multi-response variant is what exercises the decoder's
+/// list branch — and the first response is the one that wins.
+pub fn parse_calendar_home_set_multiple_responses_test() {
+  let assert Ok(home_set) =
+    capture.body("local_calendar_home_set_handmade_multi.xml")
+    |> client.parse_calendar_home_set
+  home_set
+  |> should.equal(client.CalendarHomeSet("/remote.php/dav/calendars/shogging/"))
+}

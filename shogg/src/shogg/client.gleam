@@ -242,30 +242,37 @@ fn decode_calendar_home_set_item() {
 fn user_info_decoder() {
   decode.field(
     "response",
-    decode.list({
-      use href <- decode.field(
-        "href",
-        decode.field("$text", decode.string, decode.success),
-      )
-      use current_user_principal <- decode.field(
-        "propstat",
-        decode.field(
-          "prop",
-          decode.field(
-            "current-user-principal",
-            decode.field(
-              "href",
-              decode.field("$text", decode.string, decode.success),
-              decode.success,
-            ),
-            decode.success,
-          ),
-          decode.success,
-        ),
-      )
-      HomePropfindResponse(href:, current_user_principal:)
-      |> decode.success()
-    }),
+    // A server may answer with exactly one `<response>` element, which the
+    // dynamic XML decoder hands over as a dict rather than a list — the same
+    // single-vs-list shape `calendar_home_set_decoder` already tolerates.
+    decode.one_of(decode.list(decode_user_info_item()), or: [
+      decode_user_info_item() |> decode.map(fn(v) { [v] }),
+    ]),
     decode.success,
   )
+}
+
+fn decode_user_info_item() {
+  use href <- decode.field(
+    "href",
+    decode.field("$text", decode.string, decode.success),
+  )
+  use current_user_principal <- decode.field(
+    "propstat",
+    decode.field(
+      "prop",
+      decode.field(
+        "current-user-principal",
+        decode.field(
+          "href",
+          decode.field("$text", decode.string, decode.success),
+          decode.success,
+        ),
+        decode.success,
+      ),
+      decode.success,
+    ),
+  )
+  HomePropfindResponse(href:, current_user_principal:)
+  |> decode.success()
 }
