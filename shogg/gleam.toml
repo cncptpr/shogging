@@ -28,3 +28,6 @@ gleeunit = ">= 1.0.0 and < 2.0.0"
 envoy = ">= 1.1.0 and < 2.0.0"
 birdie = ">= 1.5.4 and < 2.0.0"
 simplifile = ">= 2.4.0 and < 3.0.0"
+# Only the integration test speaks HTTP itself; the library stays IO-agnostic
+# and its consumers bring their own backend (see example/gleam.toml).
+gleam_hackney = ">= 1.3.3 and < 2.0.0"
