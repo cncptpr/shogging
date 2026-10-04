@@ -1,0 +1,8 @@
+HTTP/1.0 207 Multi-Status
+Date: Sun, 04 Oct 2026 10:12:13 GMT
+Server: WSGIServer/0.2 CPython/3.14.7
+Content-Type: text/xml; charset=utf-8
+Content-Length: 67
+
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:" />

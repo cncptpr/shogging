@@ -1,0 +1,21 @@
+---
+version: 1.5.4
+title: Serialize Parsed Radicale Task
+file: ./test/shogg/snap_test.gleam
+test_name: serialize_parsed_radicale_task_test
+---
+BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+UID:bbd2394d-47e0-4ff7-956f-0f5fb897225b
+DTSTAMP:20260316T162812Z
+CREATED:20260314T103533Z
+LAST-MODIFIED:20260316T162811Z
+STATUS:COMPLETED
+SUMMARY:Hello\, World!
+COMPLETED:20260316T191426Z
+END:VTODO
+END:VCALENDAR
+

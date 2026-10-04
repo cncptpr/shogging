@@ -1,0 +1,26 @@
+---
+version: 1.5.4
+title: Create Request Escaped Summary
+file: ./test/shogg/snap_test.gleam
+test_name: create_task_request_escaped_summary_test
+---
+> https://calendar.example/
+
+PUT /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/calendars/work/uid-escaped-1.ics
+authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
+content-type: text/calendar; charset=utf-8
+if-none-match: *
+
+BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+UID:uid-escaped-1
+DTSTAMP:20000101T000000Z
+CREATED:20000101T000000Z
+STATUS:NEEDS-ACTION
+SUMMARY:Milk\, eggs\; back\\slash\, twice
+END:VTODO
+END:VCALENDAR
+

@@ -1,8 +1,9 @@
 import gleam/http/request
 import gleam/http/response
 import gleam/list
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleam/string
+import gleam/time/timestamp
 import gleeunit
 import gleeunit/should
 import shogg/calendar.{type VComponent, VEvent, VTask}
@@ -31,7 +32,9 @@ fn calendars_response_with_components(components: List(String)) -> String {
   <> "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>"
   <> "<d:displayname>Tasks</d:displayname>"
   <> "<cs:getctag>http://sabre.io/ns/sync/1</cs:getctag>"
-  <> "<cal:supported-calendar-component-set>" <> comps <> "</cal:supported-calendar-component-set>"
+  <> "<cal:supported-calendar-component-set>"
+  <> comps
+  <> "</cal:supported-calendar-component-set>"
   <> "</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>"
   <> "</d:response>"
   <> "</d:multistatus>"
@@ -173,4 +176,133 @@ pub fn parse_discovery_response_no_location_test() {
 pub fn parse_discovery_response_non_redirect_test() {
   let resp = response.Response(status: 200, headers: [], body: "OK")
   client.parse_server_info(resp) |> should.be_error()
+}
+
+/// 303 See Other is a redirect, but not one of the four shogg follows.
+pub fn parse_discovery_response_303_test() {
+  let resp =
+    response.Response(
+      status: 303,
+      headers: [#("location", "/caldav/")],
+      body: "",
+    )
+  client.parse_server_info(resp) |> should.be_error()
+}
+
+/// Header names in a `gleam_http` response are lowercase — the app's client
+/// normalises whatever the server sent — so a response that still carries the
+/// server's original `Location` casing is not recognised.
+pub fn parse_discovery_response_uppercase_location_test() {
+  let resp =
+    response.Response(
+      status: 301,
+      headers: [#("Location", "/caldav/")],
+      body: "",
+    )
+  client.parse_server_info(resp) |> should.be_error()
+}
+
+pub fn parse_update_task_response_204_without_etag_test() {
+  let resp = response.Response(status: 204, headers: [], body: "")
+  task.parse_update_task_response(resp, empty_task()) |> should.be_error()
+}
+
+pub fn parse_update_task_response_200_test() {
+  let resp =
+    response.Response(status: 200, headers: [#("etag", "some-etag")], body: "")
+  task.parse_update_task_response(resp, empty_task()) |> should.be_error()
+}
+
+/// As with the discovery response, the header key must be lowercase for
+/// `response.get_header` to find it.
+pub fn parse_update_task_response_uppercase_etag_test() {
+  let resp =
+    response.Response(status: 204, headers: [#("ETag", "some-etag")], body: "")
+  task.parse_update_task_response(resp, empty_task()) |> should.be_error()
+}
+
+pub fn parse_delete_task_response_404_test() {
+  let resp = response.Response(status: 404, headers: [], body: "Not found")
+  task.parse_delete_task_response(resp) |> should.be_error()
+}
+
+/// The stale-etag answer a server gives when `If-Match` does not fit.
+pub fn parse_delete_task_response_412_test() {
+  let resp =
+    response.Response(status: 412, headers: [], body: "Precondition failed")
+  task.parse_delete_task_response(resp) |> should.be_error()
+}
+
+pub fn parse_delete_task_response_201_test() {
+  let resp = response.Response(status: 201, headers: [], body: "")
+  task.parse_delete_task_response(resp) |> should.be_error()
+}
+
+/// Creating with `If-None-Match: *` over an existing item fails with 412.
+pub fn parse_create_task_response_412_test() {
+  let req = request.new() |> request.set_path("/test/path.ics")
+  let resp =
+    response.Response(status: 412, headers: [], body: "Precondition failed")
+  task.parse_create_task(resp, req) |> should.be_error()
+}
+
+pub fn parse_create_task_response_204_test() {
+  let req = request.new() |> request.set_path("/test/path.ics")
+  let resp = response.Response(status: 204, headers: [], body: "")
+  task.parse_create_task(resp, req) |> should.be_error()
+}
+
+// --- is_competed --------------------------------------------------------------
+
+pub fn is_competed_status_completed_test() {
+  task.Task(..empty_task(), status: Some("COMPLETED"))
+  |> task.is_competed
+  |> should.be_true()
+}
+
+/// No status, but a completion date: the server filled in only half of it.
+pub fn is_competed_completed_date_without_status_test() {
+  task.Task(..empty_task(), completed: Some("20260101T000000Z"))
+  |> task.is_competed
+  |> should.be_true()
+}
+
+/// A task explicitly still open stays open even though a stray completion
+/// date is attached.
+pub fn is_competed_status_needs_action_with_completed_test() {
+  task.Task(
+    ..empty_task(),
+    status: Some("NEEDS-ACTION"),
+    completed: Some("20260101T000000Z"),
+  )
+  |> task.is_competed
+  |> should.be_false()
+}
+
+pub fn is_competed_open_task_test() {
+  task.Task(..empty_task(), status: Some("NEEDS-ACTION"))
+  |> task.is_competed
+  |> should.be_false()
+}
+
+pub fn is_competed_no_fields_test() {
+  empty_task()
+  |> task.is_competed
+  |> should.be_false()
+}
+
+// --- format_cal_date ----------------------------------------------------------
+
+/// Single-digit fields must come out zero padded, or the server will not
+/// read the date back.
+pub fn format_cal_date_epoch_test() {
+  timestamp.from_unix_seconds(0)
+  |> task.format_cal_date
+  |> should.equal("19700101T000000Z")
+}
+
+pub fn format_cal_date_pads_single_digits_test() {
+  timestamp.from_unix_seconds(981_173_106)
+  |> task.format_cal_date
+  |> should.equal("20010203T040506Z")
 }

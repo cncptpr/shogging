@@ -1,0 +1,8 @@
+HTTP/1.0 200 OK
+Date: Sun, 04 Oct 2026 10:12:06 GMT
+Server: WSGIServer/0.2 CPython/3.14.7
+Content-Type: text/xml; charset=utf-8
+Content-Length: 193
+
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:"><response><href>/shogging/shogging-test/shogg-capture-create.ics</href><status>HTTP/1.1 200 OK</status></response></multistatus>

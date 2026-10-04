@@ -1,0 +1,9 @@
+---
+version: 1.5.4
+title: Parsed Radicale Calendars
+file: ./test/shogg/snap_test.gleam
+test_name: parsed_calendars_table_test
+---
+Personal Calendar | - | [VEvent, VJournal, VTask] | /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/def-calendar/
+Terminplan Studium | - | [VEvent] | /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/17F84AF3-92D3-4DDA-BBF6-E1424C2EFCA5/
+Shogging Dev | - | [VEvent] | /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/64FB220B-118F-4DB6-B232-CFF0F69C9DCC/

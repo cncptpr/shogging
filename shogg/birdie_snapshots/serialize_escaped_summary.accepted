@@ -1,0 +1,19 @@
+---
+version: 1.5.4
+title: Serialize Escaped Summary
+file: ./test/shogg/snap_test.gleam
+test_name: serialize_escaped_summary_test
+---
+BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+UID:test-uid-12345
+DTSTAMP:20240315T120000Z
+CREATED:20240315T120000Z
+STATUS:NEEDS-ACTION
+SUMMARY:Milk\, eggs\; back\\slash und Ünïcode\, twice
+END:VTODO
+END:VCALENDAR
+

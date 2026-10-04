@@ -1,0 +1,16 @@
+---
+version: 1.5.4
+title: Parse Ical Results
+file: ./test/shogg/snap_test.gleam
+test_name: ical_parse_results_table_test
+---
+plain todo: Ok(Task("1", "", None, None, None, Some("Buy milk"), None, None, None, [], TaskMeta("/tasks/1.ics", "\"1\"")))
+missing uid: Ok(Task("", "", None, None, None, Some("No uid"), None, None, None, [], TaskMeta("/tasks/1.ics", "\"1\"")))
+empty vtodo: Ok(Task("", "", None, None, None, None, None, None, None, [], TaskMeta("/tasks/1.ics", "\"1\"")))
+duplicate summary: Ok(Task("1", "", None, None, None, Some("First"), None, None, None, [], TaskMeta("/tasks/1.ics", "\"1\"")))
+escaped summary: Ok(Task("1", "", None, None, None, Some("Hello, World"), None, None, None, [], TaskMeta("/tasks/1.ics", "\"1\"")))
+bad percent: Error("Invalid PERCENT-COMPLETE: half")
+no vtodo: Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
+truncated: Error("Empty VTODO")
+not ical: Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")
+empty: Error("Expected BEGIN:VCALENDAR and BEGIN:VTODO")

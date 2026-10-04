@@ -1,0 +1,6 @@
+HTTP/1.0 201 Created
+Date: Sun, 04 Oct 2026 10:11:49 GMT
+Server: WSGIServer/0.2 CPython/3.14.7
+ETag: "430f883e32ede948585489328de6329d7a3df046cfeb93b84b24e97f6b2cd21b"
+Content-Length: 0
+
