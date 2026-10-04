@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:" xmlns:CS="http://calendarserver.org/ns/"><response><href>/shogging/shogging-test/</href><propstat><prop><CS:getctag>"b9d4844e90c5fb19f6fb7c02ea0de967d18f174a43b729ab3d8d2b77d45eead2"</CS:getctag></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>

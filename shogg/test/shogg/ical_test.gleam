@@ -1,7 +1,7 @@
 import gleam/option.{None, Some}
 import gleam/result
 import gleeunit/should
-import shogg/task.{type Task, TaskMeta}
+import shogg/task.{type Task, Task, TaskMeta}
 
 /// Tests for the iCalendar parser in `task.gleam`.
 ///
@@ -9,7 +9,6 @@ import shogg/task.{type Task, TaskMeta}
 /// the todo, lines folded at 75 octets, and parameters on a property name. The
 /// parser is the least RFC 5545 conformant part of shogg, so each of these is a
 /// case where valid data used to be misread.
-
 fn parse(ical: String) -> Result(Task, String) {
   task.parse_ical(#(TaskMeta(href: "/tasks/1.ics", etag: "\"1\""), ical))
 }
@@ -74,7 +73,9 @@ pub fn folded_summary_test() {
 
   parse(ical)
   |> summary_of
-  |> should.equal(Ok("This is a very long summary that has been folded across lines"))
+  |> should.equal(Ok(
+    "This is a very long summary that has been folded across lines",
+  ))
 }
 
 /// A folded value must not be mistaken for a property of its own.
@@ -201,11 +202,187 @@ pub fn partial_percent_complete_is_not_completed_test() {
 }
 
 pub fn no_vtodo_test() {
-  let ical = vcalendar("BEGIN:VEVENT\r\nUID:1\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n")
+  let ical =
+    vcalendar("BEGIN:VEVENT\r\nUID:1\r\nSUMMARY:Standup\r\nEND:VEVENT\r\n")
 
   parse(ical) |> should.be_error()
 }
 
 pub fn empty_test() {
   parse("") |> should.be_error()
+}
+
+// --- More edge cases ---------------------------------------------------------
+
+/// A VTODO with nothing in it parses to an empty task rather than failing.
+pub fn empty_vtodo_test() {
+  parse(vcalendar("BEGIN:VTODO\r\nEND:VTODO\r\n"))
+  |> should.equal(
+    Ok(Task(
+      uid: "",
+      dtstamp: "",
+      created: None,
+      last_modified: None,
+      status: None,
+      summary: None,
+      completed: None,
+      percent_complete: None,
+      x_apple_sort_order: None,
+      other: [],
+      meta: TaskMeta(href: "/tasks/1.ics", etag: "\"1\""),
+    )),
+  )
+}
+
+/// No UID is odd but not fatal; the task keeps the empty one it started with.
+pub fn missing_uid_test() {
+  let ical = vcalendar("BEGIN:VTODO\r\nSUMMARY:No uid\r\nEND:VTODO\r\n")
+
+  let assert Ok(parsed) = parse(ical)
+  parsed.uid |> should.equal("")
+  parsed.summary |> should.equal(Some("No uid"))
+}
+
+pub fn no_summary_test() {
+  let ical = vcalendar("BEGIN:VTODO\r\nUID:1\r\nEND:VTODO\r\n")
+
+  let assert Ok(parsed) = parse(ical)
+  parsed.summary |> should.equal(None)
+}
+
+/// An empty value is still a value: `SUMMARY:` is an empty string, not an
+/// absent property.
+pub fn empty_summary_test() {
+  let ical = vcalendar("BEGIN:VTODO\r\nUID:1\r\nSUMMARY:\r\nEND:VTODO\r\n")
+
+  parse(ical) |> summary_of |> should.equal(Ok(""))
+}
+
+/// A property line without a colon at all cannot be split into name and
+/// value; the whole line becomes the name and the value stays empty.
+pub fn property_without_colon_test() {
+  let ical = vcalendar("BEGIN:VTODO\r\nUID:1\r\nMALFORMED\r\nEND:VTODO\r\n")
+
+  let assert Ok(parsed) = parse(ical)
+  parsed.other |> should.equal([#("MALFORMED", "")])
+}
+
+/// When a property appears twice the first one wins: the parser applies the
+/// lines from the bottom up, so the earliest line is written last.
+pub fn duplicate_summary_first_wins_test() {
+  let ical =
+    vcalendar(
+      "BEGIN:VTODO\r\nUID:1\r\nSUMMARY:First\r\nSUMMARY:Second\r\nEND:VTODO\r\n",
+    )
+
+  parse(ical) |> summary_of |> should.equal(Ok("First"))
+}
+
+/// Servers are supposed to use LF only inside `calendar-data`; the result
+/// must be the same as with CRLF.
+pub fn lf_only_line_endings_test() {
+  let ical = vcalendar("BEGIN:VTODO\nUID:1\nSUMMARY:Buy milk\nEND:VTODO\n")
+
+  parse(ical) |> summary_of |> should.equal(Ok("Buy milk"))
+}
+
+/// A value folded over three lines joins back into one.
+pub fn summary_folded_three_times_test() {
+  let ical =
+    vcalendar(
+      "BEGIN:VTODO\r\nUID:1\r\n"
+      <> "SUMMARY:one\r\n"
+      <> "  two\r\n"
+      <> "  three\r\n"
+      <> "END:VTODO\r\n",
+    )
+
+  parse(ical) |> summary_of |> should.equal(Ok("one two three"))
+}
+
+/// Unmodelled properties keep the order they had on the wire, so a round trip
+/// can reproduce them.
+pub fn other_properties_keep_their_order_test() {
+  let ical =
+    vcalendar(
+      "BEGIN:VTODO\r\nUID:1\r\nX-A:1\r\nX-B:2\r\nX-C:3\r\nEND:VTODO\r\n",
+    )
+
+  let assert Ok(parsed) = parse(ical)
+  parsed.other
+  |> should.equal([#("X-A", "1"), #("X-B", "2"), #("X-C", "3")])
+}
+
+// --- Round trips --------------------------------------------------------------
+
+fn round_trip(ical: String) -> Result(Task, String) {
+  use parsed <- result.try(parse(ical))
+  parse(task.serialize_task(parsed))
+}
+
+/// A backslash in a value is escaped on the way out (`\\`) and comes back as
+/// one on the way in.
+pub fn backslash_round_trip_test() {
+  let ical =
+    vcalendar(
+      "BEGIN:VTODO\r\nUID:1\r\nSUMMARY:C:\\Temp\\files\r\nEND:VTODO\r\n",
+    )
+
+  let assert Ok(parsed) = parse(ical)
+  parsed.summary |> should.equal(Some("C:\\Temp\\files"))
+
+  round_trip(ical) |> summary_of |> should.equal(Ok("C:\\Temp\\files"))
+}
+
+/// `Hello\, World` parses as `Hello, World` and serialises back into the
+/// escaped form.
+pub fn escaped_comma_round_trip_test() {
+  let ical =
+    vcalendar("BEGIN:VTODO\r\nUID:1\r\nSUMMARY:Hello\\, World\r\nEND:VTODO\r\n")
+
+  parse(ical) |> summary_of |> should.equal(Ok("Hello, World"))
+  round_trip(ical) |> summary_of |> should.equal(Ok("Hello, World"))
+}
+
+pub fn semicolon_round_trip_test() {
+  let ical =
+    vcalendar("BEGIN:VTODO\r\nUID:1\r\nSUMMARY:Buy milk; eggs\r\nEND:VTODO\r\n")
+
+  parse(ical) |> summary_of |> should.equal(Ok("Buy milk; eggs"))
+  round_trip(ical) |> summary_of |> should.equal(Ok("Buy milk; eggs"))
+}
+
+/// Every modelled field plus some unmodelled ones must survive
+/// parse -> serialize -> parse unchanged, metadata included.
+pub fn full_task_round_trip_test() {
+  let ical =
+    vcalendar(
+      "BEGIN:VTODO\r\n"
+      <> "UID:round-trip\r\n"
+      <> "DTSTAMP:20260101T120000Z\r\n"
+      <> "CREATED:20260101T100000Z\r\n"
+      <> "LAST-MODIFIED:20260101T110000Z\r\n"
+      <> "STATUS:IN-PROCESS\r\n"
+      <> "SUMMARY:Buy milk\\, eggs; and juice\r\n"
+      <> "COMPLETED:20260102T080000Z\r\n"
+      <> "PERCENT-COMPLETE:40\r\n"
+      <> "X-APPLE-SORT-ORDER:7\r\n"
+      <> "DUE:20260105T090000Z\r\n"
+      <> "X-CUSTOM:hello world\r\n"
+      <> "END:VTODO\r\n",
+    )
+
+  let assert Ok(parsed) = parse(ical)
+  parse(task.serialize_task(parsed)) |> should.equal(Ok(parsed))
+}
+
+// --- Known weaknesses ---------------------------------------------------------
+
+/// A `VERSION` inside the VTODO is invalid ical, so the parser rejects it
+/// with an error: only `VERSION:2.0` is accepted, anything else fails the
+/// task instead of crashing.
+pub fn version_other_than_2_inside_vtodo_test() {
+  let ical = vcalendar("BEGIN:VTODO\r\nUID:1\r\nVERSION:1.0\r\nEND:VTODO\r\n")
+
+  parse(ical) |> should.be_error()
 }

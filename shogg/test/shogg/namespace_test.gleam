@@ -1,3 +1,4 @@
+import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/list
 import gleeunit
@@ -113,4 +114,97 @@ pub fn strip_nested_tags_test() {
       level1 |> decode.success
     })
   result |> should.equal("test")
+}
+
+/// Keys without a prefix are left exactly as they are.
+pub fn strip_unprefixed_keys_test() {
+  let xml = "<root><child>value</child></root>"
+  let result =
+    parse_with_stripped(xml, {
+      use child <- decode.field(
+        "child",
+        decode.field("$text", decode.string, decode.success),
+      )
+      child |> decode.success
+    })
+  result |> should.equal("value")
+}
+
+/// A key with more than one colon loses only the prefix up to the first one.
+pub fn strip_key_keeps_the_rest_test() {
+  let dyn =
+    dynamic.properties([
+      #(dynamic.string("pre:mid:suffix"), dynamic.string("v")),
+    ])
+    |> namespace.strip_dynamic
+
+  let assert Ok(value) =
+    decode.run(dyn, {
+      use value <- decode.field("mid:suffix", decode.string)
+      decode.success(value)
+    })
+  value |> should.equal("v")
+}
+
+/// Stripping is recursive: a dict nested in a dict has its keys stripped too.
+pub fn strip_strips_nested_keys_test() {
+  let dyn =
+    dynamic.properties([
+      #(
+        dynamic.string("ns:outer"),
+        dynamic.properties([#(dynamic.string("ns:inner"), dynamic.string("v"))]),
+      ),
+    ])
+    |> namespace.strip_dynamic
+
+  let assert Ok(value) =
+    decode.run(dyn, {
+      use outer <- decode.field("outer", {
+        use inner <- decode.field("inner", decode.string)
+        decode.success(inner)
+      })
+      decode.success(outer)
+    })
+  value |> should.equal("v")
+}
+
+/// Strings and other primitives pass through untouched.
+pub fn strip_leaves_primitives_alone_test() {
+  let dyn = namespace.strip_dynamic(dynamic.string("plain"))
+  dyn |> should.equal(dynamic.string("plain"))
+}
+
+pub fn strip_leaves_lists_of_primitives_alone_test() {
+  let dyn =
+    dynamic.list([dynamic.string("a"), dynamic.string("b")])
+    |> namespace.strip_dynamic
+  dyn |> should.equal(dynamic.list([dynamic.string("a"), dynamic.string("b")]))
+}
+
+/// The `$text` markers the ical decoders look for carry no colon, so they
+/// survive the strip.
+pub fn strip_leaves_text_marker_alone_test() {
+  let dyn =
+    dynamic.properties([#(dynamic.string("$text"), dynamic.string("v"))])
+    |> namespace.strip_dynamic
+
+  let assert Ok(value) =
+    decode.run(dyn, {
+      use value <- decode.field("$text", decode.string)
+      decode.success(value)
+    })
+  value |> should.equal("v")
+}
+
+// --- Xmlns -------------------------------------------------------------------
+
+pub fn xmlns_to_string_test() {
+  namespace.to_string(namespace.DAV) |> should.equal("DAV:")
+  namespace.to_string(namespace.CALDAV)
+  |> should.equal("urn:ietf:params:xml:ns:caldav")
+  namespace.to_string(namespace.CalendarServer)
+  |> should.equal("http://calendarserver.org/ns/")
+  // The Apple namespace really does contain a colon.
+  namespace.to_string(namespace.Apple)
+  |> should.equal("http://apple.com/ns:ical/")
 }

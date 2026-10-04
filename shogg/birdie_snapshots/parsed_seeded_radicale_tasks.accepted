@@ -1,0 +1,12 @@
+---
+version: 1.5.4
+title: Parsed Seeded Radicale Tasks
+file: ./test/shogg/snap_test.gleam
+test_name: parsed_seeded_tasks_table_test
+---
+shogging-seed-desk | COMPLETED | Clean up the desk | - | -
+shogging-seed-groceries | NEEDS-ACTION | Lebensmittel kaufen, Brot und Milch | - | [#("DUE", "20261004T170000Z")]
+shogging-seed-insurance | COMPLETED | Versicherung anrufen | - | -
+shogging-seed-invoice | IN-PROCESS | Pay electricity invoice | 50 | [#("DUE", "20260930T120000Z")]
+shogging-seed-presentation | NEEDS-ACTION | Prepare quarterly presentation | - | [#("DUE", "20261020T090000Z")]
+shogging-seed-readme | NEEDS-ACTION | Tippfehler im README korrigieren | - | -

@@ -1,0 +1,28 @@
+---
+version: 1.5.4
+title: Update Parsed Radicale Task Request
+file: ./test/shogg/snap_test.gleam
+test_name: update_parsed_radicale_task_request_test
+---
+> https://calendar.example/
+
+PUT /caldav/7b8a9e3b-6655-40b8-8080-b89f75a5272a/def-calendar/bbd2394d-47e0-4ff7-956f-0f5fb897225b.ics
+authorization: Basic VXNlcm5hbWU6UGFzc3dvcmQ=
+content-type: text/calendar; charset=utf-8
+if-match: "c4f00cc32aeaf259fcdae95379c9e5cf1331daa3c11c3395fad96afb38a8f754"
+
+BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+UID:bbd2394d-47e0-4ff7-956f-0f5fb897225b
+DTSTAMP:20260316T162812Z
+CREATED:20260314T103533Z
+LAST-MODIFIED:20260316T162811Z
+STATUS:COMPLETED
+SUMMARY:Hello\, World!
+COMPLETED:20260316T191426Z
+END:VTODO
+END:VCALENDAR
+

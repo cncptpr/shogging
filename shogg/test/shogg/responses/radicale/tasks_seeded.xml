@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><response><href>/shogging/shogging-test/shogging-seed-desk.ics</href><propstat><prop><getetag>"714e6d8553b71d4392f03d17e23c2f2cfece3ed5509898640fbe5b8c66ddd80b"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+COMPLETED:20260928T180000Z
+CREATED:20260927T150000Z
+DTSTAMP:20261003T070000Z
+LAST-MODIFIED:20260928T180000Z
+STATUS:COMPLETED
+SUMMARY:Clean up the desk
+UID:shogging-seed-desk
+END:VTODO
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response><response><href>/shogging/shogging-test/shogging-seed-groceries.ics</href><propstat><prop><getetag>"7e7453264f4814d9d194d84d1b2f610e9344c3c8246e44ef6cea15a0ea4acc19"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+CREATED:20260930T160000Z
+DTSTAMP:20261003T070000Z
+DUE:20261004T170000Z
+LAST-MODIFIED:20260930T160000Z
+STATUS:NEEDS-ACTION
+SUMMARY:Lebensmittel kaufen\, Brot und Milch
+UID:shogging-seed-groceries
+END:VTODO
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response><response><href>/shogging/shogging-test/shogging-seed-insurance.ics</href><propstat><prop><getetag>"10dc9420ba1e19d796752f85c5ae4045016dad2df9f94b566837c19541a81af3"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+COMPLETED:20261002T143000Z
+CREATED:20260930T120000Z
+DTSTAMP:20261003T070000Z
+LAST-MODIFIED:20261002T143000Z
+STATUS:COMPLETED
+SUMMARY:Versicherung anrufen
+UID:shogging-seed-insurance
+END:VTODO
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response><response><href>/shogging/shogging-test/shogging-seed-invoice.ics</href><propstat><prop><getetag>"f51d4622ab0611605ebaacd9af6159288b7d6220e26d2e889c77874a5e468ba4"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+CREATED:20260925T090000Z
+DTSTAMP:20261003T070000Z
+DUE:20260930T120000Z
+LAST-MODIFIED:20261001T100000Z
+PERCENT-COMPLETE:50
+STATUS:IN-PROCESS
+SUMMARY:Pay electricity invoice
+UID:shogging-seed-invoice
+END:VTODO
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response><response><href>/shogging/shogging-test/shogging-seed-presentation.ics</href><propstat><prop><getetag>"e7030c468c6dfb125c197fde5c9fafc9989dcc7bbdb5fc1e1854a0e872527ca2"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+CREATED:20260929T110000Z
+DTSTAMP:20261003T070000Z
+DUE:20261020T090000Z
+LAST-MODIFIED:20260929T110000Z
+STATUS:NEEDS-ACTION
+SUMMARY:Prepare quarterly presentation
+UID:shogging-seed-presentation
+END:VTODO
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response><response><href>/shogging/shogging-test/shogging-seed-readme.ics</href><propstat><prop><getetag>"ed4f81e9e8d37b4377a5f4d4108f468f7865b8aa9e67bc40b170351de03c07e7"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+PRODID:-//Shogg//EN
+BEGIN:VTODO
+CREATED:20261002T080000Z
+DTSTAMP:20261003T070000Z
+LAST-MODIFIED:20261002T080000Z
+STATUS:NEEDS-ACTION
+SUMMARY:Tippfehler im README korrigieren
+UID:shogging-seed-readme
+END:VTODO
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>
