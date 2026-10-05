@@ -1,7 +1,7 @@
-import parsed_it/xml
+import xml
 
 pub type ShoggError(error) {
   SendError(error)
-  XmlDecodeError(xml.XmlDecodeError)
+  XmlDecodeError(xml.Error)
   ParseError(String)
 }

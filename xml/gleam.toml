@@ -1,0 +1,11 @@
+name = "xml"
+version = "1.0.0"
+
+# A pure Gleam XML parser: no FFI, same behaviour on Erlang and JavaScript.
+description = "Pure Gleam XML parsing and decoding"
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"

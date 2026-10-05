@@ -1,5 +1,4 @@
 import gleam/bool
-import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
@@ -10,11 +9,11 @@ import gleam/result
 import gleam/string
 import gleam/time/calendar as dt
 import gleam/time/timestamp.{type Timestamp}
-import parsed_it/xml
 import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
 import shogg/calendar.{type Calendar}
 import shogg/client.{type Client, type IO}
-import shogg/namespace
+import xml
+import xml/decode
 import youid/uuid
 
 pub type TaskMeta {
@@ -35,16 +34,6 @@ pub type Task {
     other: List(#(String, String)),
     meta: TaskMeta,
   )
-}
-
-fn decode_text() {
-  decode.field("$text", decode.string, decode.success)
-}
-
-fn decode_xml_list(element decoder) {
-  decode.one_of(decode.list(decoder), or: [
-    decoder |> decode.map(fn(v) { [v] }),
-  ])
 }
 
 pub fn format_cal_date(now: Timestamp) {
@@ -110,13 +99,15 @@ pub fn fetch_tasks(
 pub fn parse_tasks(
   response: Response(String),
 ) -> Result(List(Task), ShoggError(e)) {
-  use dyn <- result.try(
-    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  // Whitespace-only runs are dropped between elements, but runs with any
+  // content are kept verbatim — the newlines inside <calendar-data> are the
+  // iCalendar itself.
+  use root <- result.try(
+    xml.parse(response.body, xml.NoWhitespaceOnly)
+    |> result.map_error(XmlDecodeError),
   )
-  let stripped = namespace.strip_dynamic(dyn)
   use parsed <- result.try(
-    decode.run(stripped, tasks_responses_decoder())
-    |> result.map_error(xml.UnableToDecode)
+    decode.run(root, tasks_responses_decoder())
     |> result.map_error(XmlDecodeError),
   )
   parsed
@@ -124,32 +115,24 @@ pub fn parse_tasks(
   |> Ok
 }
 
-fn tasks_responses_decoder() {
-  use responses <- decode.optional_field(
-    "response",
-    [],
-    decode_xml_list({
-      use href <- decode.field(
-        "href",
-        decode.field("$text", decode.string, decode.success),
-      )
-      use props <- decode.field(
-        "propstat",
-        decode_xml_list(decode_tasks_propstat()),
-      )
-      case props |> option.values() |> list.first() {
-        Ok(#(Some(etag), Some(data))) ->
-          #(TaskMeta(href:, etag:), data)
-          |> decode.success
-        _ -> decode.failure(#(TaskMeta("", ""), ""), "No 200 OK propstat found")
-      }
-    }),
-  )
-  responses |> decode.success
+fn tasks_responses_decoder() -> decode.Decoder(List(#(TaskMeta, String))) {
+  use responses <- decode.children("response", task_response_decoder())
+  decode.success(responses)
 }
 
-fn decode_tasks_propstat() {
-  use status <- decode.field("status", decode_text())
+fn task_response_decoder() -> decode.Decoder(#(TaskMeta, String)) {
+  use href <- decode.field("href", decode.text)
+  use props <- decode.children("propstat", tasks_propstat_decoder())
+  case props |> option.values() |> list.first() {
+    Ok(#(Some(etag), Some(data))) ->
+      #(TaskMeta(href:, etag:), data)
+      |> decode.success
+    _ -> decode.failure(#(TaskMeta("", ""), ""), "No 200 OK propstat found")
+  }
+}
+
+fn tasks_propstat_decoder() -> decode.Decoder(Option(#(Option(String), Option(String)))) {
+  use status <- decode.field("status", decode.text)
   use <- bool.guard(
     when: string.contains(status, "404 Not Found"),
     return: decode.success(None),
@@ -165,12 +148,12 @@ fn decode_tasks_propstat() {
     use etag <- decode.optional_field(
       "getetag",
       None,
-      decode_text() |> decode.map(Some),
+      decode.text |> decode.map(Some),
     )
     use calendar_data <- decode.optional_field(
       "calendar-data",
       None,
-      decode_text() |> decode.map(Some),
+      decode.text |> decode.map(Some),
     )
     #(etag, calendar_data) |> decode.success
   })

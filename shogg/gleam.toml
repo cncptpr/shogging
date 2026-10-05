@@ -16,10 +16,7 @@ version = "1.0.0"
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
 gleam_http = ">= 3.0.0 and < 5.0.0"
 
-# This fork of parsed_it is patched, to preserve whitespace instead of
-# normalizing it, since I need the newlines to parse the ical strings.
-# TODO: Do the preseving also for JS
-parsed_it = { git = "https://github.com/cncptpr/parsed_it", ref="cb0fd07" }
+xml = { path = "../xml" }
 youid = ">= 1.5.1 and < 2.0.0"
 gleam_time = ">= 1.7.0 and < 2.0.0"
 

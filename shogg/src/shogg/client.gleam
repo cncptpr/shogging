@@ -1,5 +1,4 @@
 import gleam/bit_array
-import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
@@ -7,9 +6,9 @@ import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
-import parsed_it/xml
 import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
-import shogg/namespace
+import xml
+import xml/decode
 
 pub type Client(io) {
   Client(request: Request(String), io: io)
@@ -131,34 +130,23 @@ pub fn user_info_request(
 pub fn parse_user_info(
   response: Response(String),
 ) -> Result(UserInfo, ShoggError(e)) {
-  use dyn <- result.try(
-    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  use root <- result.try(
+    xml.parse(response.body, xml.NoWhitespaceOnly)
+    |> result.map_error(XmlDecodeError),
   )
-  let stripped = namespace.strip_dynamic(dyn)
-
   use parsed <- result.try(
-    decode.run(stripped, user_info_decoder())
-    |> result.map_error(xml.UnableToDecode)
+    decode.run(root, user_info_decoder())
     |> result.map_error(XmlDecodeError),
   )
   case parsed {
     [] -> Error(ParseError("No responses found"))
-    [HomePropfindResponse(current_user_principal:, ..), ..] ->
-      Ok(UserInfo(current_user_principal))
+    [principal, ..] -> Ok(UserInfo(principal))
   }
 }
 
 fn encode_basic_auth(username: String, password: String) -> String {
   "Basic "
   <> bit_array.base64_encode(<<username:utf8, ":":utf8, password:utf8>>, True)
-}
-
-type HomePropfindResponse {
-  HomePropfindResponse(href: String, current_user_principal: String)
-}
-
-type CalendarHomeSetPropfindResponse {
-  CalendarHomeSetPropfindResponse(href: String, calendar_home_set: String)
 }
 
 pub fn fetch_calendar_home_set(
@@ -187,92 +175,40 @@ pub fn calendar_home_set_request(
 pub fn parse_calendar_home_set(
   response: Response(String),
 ) -> Result(CalendarHomeSet, ShoggError(e)) {
-  use dyn <- result.try(
-    xml.parse_dynamic(response.body) |> result.map_error(XmlDecodeError),
+  use root <- result.try(
+    xml.parse(response.body, xml.NoWhitespaceOnly)
+    |> result.map_error(XmlDecodeError),
   )
-  let stripped = namespace.strip_dynamic(dyn)
-
   use parsed <- result.try(
-    decode.run(stripped, calendar_home_set_decoder())
-    |> result.map_error(xml.UnableToDecode)
+    decode.run(root, calendar_home_set_decoder())
     |> result.map_error(XmlDecodeError),
   )
   case parsed {
     [] -> Error(ParseError("No responses found"))
-    [CalendarHomeSetPropfindResponse(calendar_home_set:, ..), ..] ->
-      Ok(CalendarHomeSet(calendar_home_set))
+    [home, ..] -> Ok(CalendarHomeSet(home))
   }
 }
 
-fn calendar_home_set_decoder() {
-  use responses <- decode.field(
-    "response",
-    decode.one_of(decode.list(decode_calendar_home_set_item()), or: [
-      decode_calendar_home_set_item() |> decode.map(fn(v) { [v] }),
-    ]),
-  )
-  responses |> decode.success
+fn calendar_home_set_decoder() -> decode.Decoder(List(String)) {
+  use homes <- decode.children("response", calendar_home_set_item_decoder())
+  decode.success(homes)
 }
 
-fn decode_calendar_home_set_item() {
-  use _href <- decode.field(
-    "href",
-    decode.field("$text", decode.string, decode.success),
-  )
-  use calendar_home_set <- decode.field(
-    "propstat",
-    decode.field(
-      "prop",
-      decode.field(
-        "calendar-home-set",
-        decode.field(
-          "href",
-          decode.field("$text", decode.string, decode.success),
-          decode.success,
-        ),
-        decode.success,
-      ),
-      decode.success,
-    ),
-  )
-  CalendarHomeSetPropfindResponse(href: "", calendar_home_set:)
-  |> decode.success()
-}
-
-fn user_info_decoder() {
-  decode.field(
-    "response",
-    // A server may answer with exactly one `<response>` element, which the
-    // dynamic XML decoder hands over as a dict rather than a list — the same
-    // single-vs-list shape `calendar_home_set_decoder` already tolerates.
-    decode.one_of(decode.list(decode_user_info_item()), or: [
-      decode_user_info_item() |> decode.map(fn(v) { [v] }),
-    ]),
-    decode.success,
+fn calendar_home_set_item_decoder() -> decode.Decoder(String) {
+  decode.at(
+    ["propstat", "prop", "calendar-home-set", "href"],
+    decode.text,
   )
 }
 
-fn decode_user_info_item() {
-  use href <- decode.field(
-    "href",
-    decode.field("$text", decode.string, decode.success),
+fn user_info_decoder() -> decode.Decoder(List(String)) {
+  use principals <- decode.children("response", user_info_item_decoder())
+  decode.success(principals)
+}
+
+fn user_info_item_decoder() -> decode.Decoder(String) {
+  decode.at(
+    ["propstat", "prop", "current-user-principal", "href"],
+    decode.text,
   )
-  use current_user_principal <- decode.field(
-    "propstat",
-    decode.field(
-      "prop",
-      decode.field(
-        "current-user-principal",
-        decode.field(
-          "href",
-          decode.field("$text", decode.string, decode.success),
-          decode.success,
-        ),
-        decode.success,
-      ),
-      decode.success,
-    ),
-  )
-  HomePropfindResponse(href:, current_user_principal:)
-  |> decode.success()
 }
