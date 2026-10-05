@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791059599,
-        "narHash": "sha256-bEgGLbFub1q1L0brRpDRrwPSAvvCLgF4TG7EjvdcDPw=",
+        "lastModified": 1791125171,
+        "narHash": "sha256-FtHNWQ8T+tI9Ce1fdwYb+WHDVFHeBzqsePpf5tYuEX8=",
         "owner": "cncptpr",
         "repo": "nix-gleam",
-        "rev": "9d259a6b9fb4cae338a5dad5ca5d1d4e96a8f529",
+        "rev": "33f58fdf13b322bc8b107358febdb1dc28ed3c0a",
         "type": "github"
       },
       "original": {

@@ -12,8 +12,8 @@ import gleam/time/timestamp.{type Timestamp}
 import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
 import shogg/calendar.{type Calendar}
 import shogg/client.{type Client, type IO}
-import xml
-import xml/decode
+import shogxml
+import shogxml/decode
 import youid/uuid
 
 pub type TaskMeta {
@@ -103,7 +103,7 @@ pub fn parse_tasks(
   // content are kept verbatim — the newlines inside <calendar-data> are the
   // iCalendar itself.
   use root <- result.try(
-    xml.parse(response.body, xml.NoWhitespaceOnly)
+    shogxml.parse(response.body, shogxml.NoWhitespaceOnly)
     |> result.map_error(XmlDecodeError),
   )
   use parsed <- result.try(

@@ -8,8 +8,8 @@ import gleam/result
 import gleam/string
 import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
 import shogg/client.{type CalendarHomeSet, type Client, type IO}
-import xml
-import xml/decode
+import shogxml
+import shogxml/decode
 
 pub type VComponent {
   VEvent
@@ -69,7 +69,7 @@ pub fn parse_calendars(
   response: Response(String),
 ) -> Result(List(Calendar), ShoggError(e)) {
   use root <- result.try(
-    xml.parse(response.body, xml.NoWhitespaceOnly)
+    shogxml.parse(response.body, shogxml.NoWhitespaceOnly)
     |> result.map_error(XmlDecodeError),
   )
   use parsed <- result.try(
@@ -101,10 +101,7 @@ type GetCalendarsResponse {
   GetCalendarsResponse(href: String, prop: GetCalendarsProp)
 }
 
-/// Maps a `<resourcetype>` child's local name to what it means. A server is
-/// free to advertise types this app does not know, so they are kept as
-/// `Other` rather than refused.
-fn resource_type_of_tag(tag: String) -> ResourceType {
+fn resource_type_from_tag(tag: String) -> ResourceType {
   case tag {
     "addressbook" -> CardDAVAdressbook
     "collection" -> Collection
@@ -115,12 +112,6 @@ fn resource_type_of_tag(tag: String) -> ResourceType {
 }
 
 /// The components this app knows how to show tasks from.
-///
-/// A server is free to advertise others as well — availability and free/busy
-/// among them — so an unrecognised name is dropped rather than refused: a
-/// calendar that supports VTODOs alongside something else still supports VTODOs.
-/// `Error` is what `list.filter_map` drops, hence the error rather than an
-/// option; the same shape `decode_resource_type_tag` uses.
 fn vcomponent_of_name(name name) -> Result(VComponent, Nil) {
   case name {
     "VTODO" -> Ok(VTask)
@@ -166,8 +157,8 @@ fn decode_calendars_propstat() -> decode.Decoder(Option(GetCalendarsProp)) {
       None,
       decode.element
         |> decode.map(fn(element) {
-          xml.children(element)
-          |> list.map(fn(child) { resource_type_of_tag(child.tag) })
+          shogxml.children(element)
+          |> list.map(fn(child) { resource_type_from_tag(child.tag) })
           |> Some
         }),
     )
@@ -264,7 +255,7 @@ pub fn parse_changed(
   response: Response(String),
 ) -> Result(Change(Calendar), ShoggError(e)) {
   use root <- result.try(
-    xml.parse(response.body, xml.NoWhitespaceOnly)
+    shogxml.parse(response.body, shogxml.NoWhitespaceOnly)
     |> result.map_error(XmlDecodeError),
   )
   use parsed <- result.try(

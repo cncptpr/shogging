@@ -1,20 +1,19 @@
-//// Pure Gleam XML parsing: no FFI, identical behaviour on Erlang and
-//// JavaScript.
+//// Pure Gleam XML parsing.
 ////
-//// `parse` turns an XML string into a tree of `Element`s carrying the local
-//// tag name, the resolved namespace URI, attributes, and children. Character
-//// data arrives as `Text` nodes among the children, with three modes
-//// controlling what happens to whitespace:
+//// `parse` turns an XML string into a tree of `Node`s
+//// `Node`s may be XML-`Element`s containg further `Node`s, `Comment`s or `Text`.
 ////
-//// - `KeepWhitespace`: everything verbatim, needed when the text *is* the
-////   payload (iCalendars, embedded scripts).
-//// - `NoWhitespaceOnly`: text runs that are entirely whitespace (element
-////   indentation) are dropped, others verbatim. The usual choice.
+//// For parsing Text, whitespace can be handled in three ways:
+//// - `KeepWhitespace`: everything is kept, needed when the whitespace
+////   is importantant. Most truthfull for normalized xml.
+//// - `NoWhitespaceOnly`: text nodes, that are entirely whitespace are dropped,
+////   otherwise kept unchanged. Cleaner output for prettified xml,
+////   while retaining Text truthfully.
 //// - `TrimWhitespace`: every text run is trimmed at both ends; runs left
 ////   empty are dropped.
 ////
 //// The extracted tree is most easily consumed with the decoders in
-//// `xml/decode`, which are modelled on `gleam/dynamic/decode`:
+//// `shogxml/decode`, which are modelled on `gleam/dynamic/decode`:
 ////
 //// ```gleam
 //// use items <- decode.children("response", item_decoder())
@@ -93,7 +92,7 @@ pub type Error {
 /// Parses an XML document with the given whitespace mode.
 ///
 /// ```gleam
-/// let assert Ok(root) = xml.parse("<a><b>hi</b></a>", xml.NoWhitespaceOnly)
+/// let assert Ok(root) = shogxml.parse("<a><b>hi</b></a>", shogxml.NoWhitespaceOnly)
 /// ```
 pub fn parse(input: String, whitespace: Whitespace) -> Result(Element, Error) {
   parse_loop(string.to_graphemes(input), 0, [], None, whitespace)
@@ -112,7 +111,7 @@ pub fn children(element: Element) -> List(Element) {
 }
 
 /// The element children of `element` with the given local name, in document
-/// order. The namespace is not considered; see `xml/decode` for
+/// order. The namespace is not considered; see `shogxml/decode` for
 /// namespace-aware decoding.
 pub fn children_named(element: Element, name: String) -> List(Element) {
   children(element)
@@ -201,8 +200,7 @@ fn parse_loop(
     ["<", "!", "[", "C", "D", "A", "T", "A", "[", ..rest] ->
       handle_cdata(rest, pos, stack, root, whitespace)
     ["<", "?", ..rest] -> handle_pi(rest, pos, stack, root, whitespace)
-    ["<", "!", ..rest] ->
-      handle_declaration(rest, pos, stack, root, whitespace)
+    ["<", "!", ..rest] -> handle_declaration(rest, pos, stack, root, whitespace)
     ["<", ..rest] -> handle_open(rest, pos, stack, root, whitespace)
     _ -> handle_text(input, pos, stack, root, whitespace)
   }
@@ -274,10 +272,7 @@ fn handle_close(
           }
       }
     _ ->
-      Error(InvalidXml(
-        "Expected '>' to finish the closing tag </" <> name,
-        pos,
-      ))
+      Error(InvalidXml("Expected '>' to finish the closing tag </" <> name, pos))
   }
 }
 
@@ -374,7 +369,10 @@ fn handle_comment(
             rest,
             next_pos,
             [
-              Frame(..frame, children: [Comment(string.concat(content)), ..frame.children]),
+              Frame(..frame, children: [
+                Comment(string.concat(content)),
+                ..frame.children
+              ]),
               ..frames
             ],
             root,
@@ -397,7 +395,13 @@ fn handle_pi(
   case scan_for(input, ["?", ">"]) {
     Error(Nil) -> Error(InvalidXml("Unterminated processing instruction", pos))
     Ok(#(content, rest)) ->
-      parse_loop(rest, pos + 2 + list.length(content) + 2, stack, root, whitespace)
+      parse_loop(
+        rest,
+        pos + 2 + list.length(content) + 2,
+        stack,
+        root,
+        whitespace,
+      )
   }
 }
 
@@ -473,7 +477,10 @@ fn take_text(input: List(String)) -> #(List(String), List(String)) {
   do_take_text(input, [])
 }
 
-fn do_take_text(input: List(String), acc: List(String)) -> #(List(String), List(String)) {
+fn do_take_text(
+  input: List(String),
+  acc: List(String),
+) -> #(List(String), List(String)) {
   case input {
     ["<", ..] -> #(list.reverse(acc), input)
     [] -> #(list.reverse(acc), [])
@@ -503,9 +510,11 @@ fn parse_attributes(
           case rest {
             ["=", ..rest] -> {
               let #(rest, after_equals) = skip_space(rest, after_space + 1)
-              use #(value, rest, after_value) <- result.try(
-                take_attr_value(rest, after_equals, pos),
-              )
+              use #(value, rest, after_value) <- result.try(take_attr_value(
+                rest,
+                after_equals,
+                pos,
+              ))
               use #(attrs, rest, final_pos, self_closing) <- result.try(
                 parse_attributes(rest, after_value),
               )
@@ -529,13 +538,13 @@ fn take_attr_value(
   err_pos: Int,
 ) -> Result(#(String, List(String), Int), Error) {
   case input {
-    [] -> Error(InvalidXml("Unexpected end of input in an attribute value", err_pos))
+    [] ->
+      Error(InvalidXml("Unexpected end of input in an attribute value", err_pos))
     [quote, ..rest] ->
       case quote {
         "\"" -> take_quoted(rest, quote, pos, err_pos, [])
         "'" -> take_quoted(rest, quote, pos, err_pos, [])
-        _ ->
-          Error(InvalidXml("Attribute values must be quoted", err_pos))
+        _ -> Error(InvalidXml("Attribute values must be quoted", err_pos))
       }
   }
 }
@@ -574,8 +583,7 @@ fn build_frame(
   // Namespace declarations apply to the whole element regardless of where
   // they appear among the attributes, so they are collected first and layered
   // over the parent scope: the nearest declaration wins.
-  let declarations =
-    list.filter_map(raw_attrs, xmlns_declaration)
+  let declarations = list.filter_map(raw_attrs, xmlns_declaration)
   let scope = list.append(declarations, parent_scope)
   let #(prefix, local) = split_qname(qualified)
   let attributes =
@@ -623,10 +631,7 @@ fn attach(
       }
     [parent, ..rest] ->
       Ok(#(
-        [
-          Frame(..parent, children: [Elem(element), ..parent.children]),
-          ..rest
-        ],
+        [Frame(..parent, children: [Elem(element), ..parent.children]), ..rest],
         root,
       ))
   }
@@ -740,8 +745,7 @@ fn take_reference(
     _, 24 -> Error(Nil)
     [], _ -> Error(Nil)
     [";", ..rest], _ -> Ok(#(string.concat(list.reverse(acc)), rest))
-    [grapheme, ..rest], _ ->
-      take_reference(rest, [grapheme, ..acc], taken + 1)
+    [grapheme, ..rest], _ -> take_reference(rest, [grapheme, ..acc], taken + 1)
   }
 }
 
@@ -757,7 +761,9 @@ fn reference_to_string(reference: String) -> Result(String, Nil) {
         False -> Error(Nil)
         True -> {
           let digits = string.drop_start(reference, 1)
-          let parsed = case string.starts_with(digits, "x") || string.starts_with(digits, "X") {
+          let parsed = case
+            string.starts_with(digits, "x") || string.starts_with(digits, "X")
+          {
             True -> int.base_parse(string.drop_start(digits, 1), 16)
             False -> int.parse(digits)
           }

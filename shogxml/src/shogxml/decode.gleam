@@ -1,5 +1,4 @@
-//// Decoders for `xml.Element` values, modelled on
-//// `gleam/dynamic/decode`.
+//// Decoders for `shogxml.Element` values, modelled on `gleam/dynamic/decode`.
 ////
 //// A decoder runs over a single element and extracts a typed value out of
 //// it. Compose them with `field`/`optional_field` (matching child elements by
@@ -29,7 +28,7 @@ import gleam/dynamic/decode.{type DecodeError, DecodeError}
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import xml.{type Element, Element, UnableToDecode}
+import shogxml.{type Element, Element, UnableToDecode}
 
 /// A decoder that extracts a value of type `t` from an element.
 pub opaque type Decoder(t) {
@@ -39,7 +38,7 @@ pub opaque type Decoder(t) {
 /// Runs a decoder against an element.
 ///
 /// Returns `UnableToDecode` with all accumulated errors when anything fails.
-pub fn run(element: Element, decoder: Decoder(t)) -> Result(t, xml.Error) {
+pub fn run(element: Element, decoder: Decoder(t)) -> Result(t, shogxml.Error) {
   let #(value, errors) = decoder.function(element)
   case errors {
     [] -> Ok(value)
@@ -79,9 +78,10 @@ pub fn field(
   next: fn(t) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let #(value, errors) = resolve_child(xml.child(element, name), inner, [
-      name,
-    ])
+    let #(value, errors) =
+      resolve_child(shogxml.child(element, name), inner, [
+        name,
+      ])
     let #(out, rest) = next(value).function(element)
     #(out, list.append(errors, rest))
   })
@@ -95,7 +95,7 @@ pub fn optional_field(
   next: fn(t) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let #(value, errors) = case xml.child(element, name) {
+    let #(value, errors) = case shogxml.child(element, name) {
       Ok(child) -> {
         let #(value, errors) = inner.function(child)
         #(value, push_path(errors, [name]))
@@ -115,11 +115,8 @@ pub fn field_ns(
   next: fn(t) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let #(value, errors) = resolve_child(
-      child_ns(element, namespace, name),
-      inner,
-      [name],
-    )
+    let #(value, errors) =
+      resolve_child(child_ns(element, namespace, name), inner, [name])
     let #(out, rest) = next(value).function(element)
     #(out, list.append(errors, rest))
   })
@@ -150,9 +147,7 @@ pub fn optional_field_ns(
 /// Decodes a value nested under a path of child names, e.g.
 /// `decode.at(["propstat", "prop", "href"], decode.text)`.
 pub fn at(path: List(String), inner: Decoder(t)) -> Decoder(t) {
-  Decoder(fn(element) {
-    resolve_path(path, element, inner, [])
-  })
+  Decoder(fn(element) { resolve_path(path, element, inner, []) })
 }
 
 /// Like `at`, but returns `default` when the path does not exist.
@@ -180,13 +175,8 @@ pub fn children(
   next: fn(List(t)) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let #(values, errors) = decode_each(
-      xml.children_named(element, name),
-      inner,
-      name,
-      0,
-      [],
-    )
+    let #(values, errors) =
+      decode_each(shogxml.children_named(element, name), inner, name, 0, [])
     let #(out, rest) = next(values).function(element)
     #(out, list.append(errors, rest))
   })
@@ -198,13 +188,8 @@ pub fn all(
   next: fn(List(t)) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let #(values, errors) = decode_each(
-      xml.children(element),
-      inner,
-      "*",
-      0,
-      [],
-    )
+    let #(values, errors) =
+      decode_each(shogxml.children(element), inner, "*", 0, [])
     let #(out, rest) = next(values).function(element)
     #(out, list.append(errors, rest))
   })
@@ -229,7 +214,7 @@ pub fn attribute(
   next: fn(String) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let #(value, errors) = case xml.attr(element, name) {
+    let #(value, errors) = case shogxml.attr(element, name) {
       Some(value) -> #(value, [])
       None -> #("", [DecodeError("Attribute", "Nothing", [name])])
     }
@@ -245,7 +230,7 @@ pub fn optional_attribute(
   next: fn(String) -> Decoder(final),
 ) -> Decoder(final) {
   Decoder(fn(element) {
-    let value = case xml.attr(element, name) {
+    let value = case shogxml.attr(element, name) {
       Some(value) -> value
       None -> default
     }
@@ -261,7 +246,7 @@ pub fn optional_attribute(
 pub const text: Decoder(String) = Decoder(decode_text)
 
 fn decode_text(element: Element) -> #(String, List(DecodeError)) {
-  case xml.text(element) {
+  case shogxml.text(element) {
     "" -> #("", [DecodeError("Text", "Nothing", [])])
     value -> #(value, [])
   }
@@ -354,14 +339,14 @@ fn resolve_path(
       #(value, push_path(errors, visited))
     }
     [name, ..rest] ->
-      case xml.child(element, name) {
-        Ok(child) -> resolve_path(rest, child, inner, list.append(visited, [name]))
+      case shogxml.child(element, name) {
+        Ok(child) ->
+          resolve_path(rest, child, inner, list.append(visited, [name]))
         Error(Nil) -> {
           let #(placeholder, _) = inner.function(empty_element())
-          #(
-            placeholder,
-            [DecodeError("Field", "Nothing", list.append(visited, [name]))],
-          )
+          #(placeholder, [
+            DecodeError("Field", "Nothing", list.append(visited, [name])),
+          ])
         }
       }
   }
@@ -371,7 +356,7 @@ fn descend(path: List(String), element: Element) -> Result(Element, Nil) {
   case path {
     [] -> Ok(element)
     [name, ..rest] ->
-      case xml.child(element, name) {
+      case shogxml.child(element, name) {
         Ok(child) -> descend(rest, child)
         Error(Nil) -> Error(Nil)
       }
@@ -383,7 +368,7 @@ fn child_ns(
   namespace: String,
   name: String,
 ) -> Result(Element, Nil) {
-  xml.children_named(element, name)
+  shogxml.children_named(element, name)
   |> list.find(fn(child) { child.namespace == Some(namespace) })
 }
 
@@ -399,16 +384,17 @@ fn decode_each(
     [element, ..rest] -> {
       let #(value, errors) = inner.function(element)
       let errors = push_path(errors, [name, int.to_string(index)])
-      let #(values, more) = decode_each(rest, inner, name, index + 1, [
-        value,
-        ..acc
-      ])
+      let #(values, more) =
+        decode_each(rest, inner, name, index + 1, [value, ..acc])
       #(values, list.append(errors, more))
     }
   }
 }
 
-fn push_path(errors: List(DecodeError), path: List(String)) -> List(DecodeError) {
+fn push_path(
+  errors: List(DecodeError),
+  path: List(String),
+) -> List(DecodeError) {
   list.map(errors, fn(error) {
     DecodeError(..error, path: list.append(path, error.path))
   })

@@ -67,9 +67,9 @@
       exec = "gleam test";
     };
 
-    "xml:test" = {
-      description = "Run the tests for the pure Gleam xml package";
-      cwd = "${config.devenv.root}/xml";
+    "shogxml:test" = {
+      description = "Run the tests for the pure Gleam shogxml package";
+      cwd = "${config.devenv.root}/shogxml";
       exec = "gleam test";
     };
   };

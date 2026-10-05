@@ -1,4 +1,4 @@
-name = "xml"
+name = "shogxml"
 version = "1.0.0"
 
 # A pure Gleam XML parser: no FFI, same behaviour on Erlang and JavaScript.

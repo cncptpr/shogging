@@ -2,15 +2,15 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
-import xml
-import xml/decode
+import shogxml
+import shogxml/decode
 
 pub fn main() {
   gleeunit.main()
 }
 
-fn parse_ok(input: String) -> xml.Element {
-  let assert Ok(element) = xml.parse(input, xml.NoWhitespaceOnly)
+fn parse_ok(input: String) -> shogxml.Element {
+  let assert Ok(element) = shogxml.parse(input, shogxml.NoWhitespaceOnly)
   element
 }
 
@@ -19,18 +19,18 @@ fn parse_ok(input: String) -> xml.Element {
 pub fn parses_nested_elements_test() {
   let root = parse_ok("<a><b>hi</b><c/></a>")
   root.tag |> should.equal("a")
-  root |> xml.text |> should.equal("")
-  let assert Ok(b) = root |> xml.child("b")
-  b |> xml.text |> should.equal("hi")
-  let assert Ok(c) = root |> xml.child("c")
+  root |> shogxml.text |> should.equal("")
+  let assert Ok(b) = root |> shogxml.child("b")
+  b |> shogxml.text |> should.equal("hi")
+  let assert Ok(c) = root |> shogxml.child("c")
   c.children |> should.equal([])
 }
 
 pub fn parses_attributes_test() {
   let root = parse_ok("<comp name=\"VTODO\" other='x'/>")
-  root |> xml.attr("name") |> should.equal(Some("VTODO"))
-  root |> xml.attr("other") |> should.equal(Some("x"))
-  root |> xml.attr("missing") |> should.equal(None)
+  root |> shogxml.attr("name") |> should.equal(Some("VTODO"))
+  root |> shogxml.attr("other") |> should.equal(Some("x"))
+  root |> shogxml.attr("missing") |> should.equal(None)
   let assert [name, other] = root.attributes
   name.name |> should.equal("name")
   other.name |> should.equal("other")
@@ -38,17 +38,17 @@ pub fn parses_attributes_test() {
 
 pub fn parses_entities_test() {
   let root = parse_ok("<a>&lt;tag&gt; &amp; &quot;q&quot; &#65;&#x42;</a>")
-  root |> xml.text |> should.equal("<tag> & \"q\" AB")
+  root |> shogxml.text |> should.equal("<tag> & \"q\" AB")
 }
 
 pub fn parses_attribute_entities_test() {
   let root = parse_ok("<a v=\"1 &lt; 2 &amp; 3\"/>")
-  root |> xml.attr("v") |> should.equal(Some("1 < 2 & 3"))
+  root |> shogxml.attr("v") |> should.equal(Some("1 < 2 & 3"))
 }
 
 pub fn parses_cdata_test() {
   let root = parse_ok("<a><![CDATA[<not & markup>]]></a>")
-  root |> xml.text |> should.equal("<not & markup>")
+  root |> shogxml.text |> should.equal("<not & markup>")
 }
 
 pub fn skips_declaration_comment_and_pi_test() {
@@ -57,90 +57,90 @@ pub fn skips_declaration_comment_and_pi_test() {
       "<?xml version=\"1.0\"?><!-- hi --><?php echo 1 ?><a>x</a><!-- bye -->",
     )
   root.tag |> should.equal("a")
-  root |> xml.text |> should.equal("x")
+  root |> shogxml.text |> should.equal("x")
 }
 
 pub fn keeps_comments_inside_elements_test() {
   let root = parse_ok("<a><!-- keep me --></a>")
-  let assert [xml.Comment(content)] = root.children
+  let assert [shogxml.Comment(content)] = root.children
   content |> should.equal(" keep me ")
 }
 
 pub fn errors_on_mismatched_tag_test() {
-  xml.parse("<a><b></a></b>", xml.NoWhitespaceOnly)
+  shogxml.parse("<a><b></a></b>", shogxml.NoWhitespaceOnly)
   |> should.be_error
 }
 
 pub fn errors_on_unclosed_tag_test() {
-  xml.parse("<a><b>", xml.NoWhitespaceOnly)
+  shogxml.parse("<a><b>", shogxml.NoWhitespaceOnly)
   |> should.be_error
 }
 
 pub fn errors_on_unknown_entity_test() {
-  xml.parse("<a>&nope;</a>", xml.NoWhitespaceOnly)
+  shogxml.parse("<a>&nope;</a>", shogxml.NoWhitespaceOnly)
   |> should.be_error
 }
 
 pub fn errors_on_text_outside_root_test() {
-  xml.parse("stray<a/>", xml.NoWhitespaceOnly)
+  shogxml.parse("stray<a/>", shogxml.NoWhitespaceOnly)
   |> should.be_error
 }
 
 pub fn errors_on_two_roots_test() {
-  xml.parse("<a/><b/>", xml.NoWhitespaceOnly)
+  shogxml.parse("<a/><b/>", shogxml.NoWhitespaceOnly)
   |> should.be_error
 }
 
 pub fn errors_on_no_root_test() {
-  xml.parse("<!-- just a comment -->", xml.NoWhitespaceOnly)
+  shogxml.parse("<!-- just a comment -->", shogxml.NoWhitespaceOnly)
   |> should.be_error
 }
 
 pub fn allows_newlines_outside_root_test() {
   // Pretty-printed documents start with a newline after the declaration.
-  let assert Ok(_) = xml.parse("\n<a/>\n", xml.KeepWhitespace)
+  let assert Ok(_) = shogxml.parse("\n<a/>\n", shogxml.KeepWhitespace)
 }
 
 // Whitespace modes
 
 pub fn keep_whitespace_test() {
-  let root = xml.parse("\n  <a>  x  </a>\n", xml.KeepWhitespace)
+  let root = shogxml.parse("\n  <a>  x  </a>\n", shogxml.KeepWhitespace)
   let assert Ok(a) = root
   // The indentation around the root is outside it and whitespace-only, so it
   // is allowed; the text inside is verbatim.
-  a |> xml.text |> should.equal("  x  ")
+  a |> shogxml.text |> should.equal("  x  ")
 }
 
 pub fn keep_whitespace_preserves_ical_test() {
   let ical = "BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR\n"
-  let root = xml.parse("<c:calendar-data xmlns:c=\"urn:x\">" <> ical <> "</c:calendar-data>", xml.KeepWhitespace)
+  let root = shogxml.parse("<c:calendar-data xmlns:c=\"urn:x\">" <> ical <> "</c:calendar-data>", shogxml.KeepWhitespace)
   let assert Ok(data) = root
-  data |> xml.text |> should.equal(ical)
+  data |> shogxml.text |> should.equal(ical)
 }
 
 pub fn no_whitespace_only_drops_indentation_test() {
   let root =
     parse_ok("<a>\n  <b>x</b>\n  <c>  y  </c>\n</a>")
   // Indentation between elements is gone, inner text verbatim.
-  root |> xml.text |> should.equal("")
-  let assert Ok(b) = root |> xml.child("b")
-  b |> xml.text |> should.equal("x")
-  let assert Ok(c) = root |> xml.child("c")
-  c |> xml.text |> should.equal("  y  ")
+  root |> shogxml.text |> should.equal("")
+  let assert Ok(b) = root |> shogxml.child("b")
+  b |> shogxml.text |> should.equal("x")
+  let assert Ok(c) = root |> shogxml.child("c")
+  c |> shogxml.text |> should.equal("  y  ")
 }
 
 pub fn trim_whitespace_test() {
-  let root = xml.parse("<a>\n  <b>  x  </b>\n</a>", xml.TrimWhitespace)
+  let root = shogxml.parse("<a>\n  <b>  x  </b>\n</a>", shogxml.TrimWhitespace)
   let assert Ok(a) = root
-  a |> xml.text |> should.equal("")
-  let assert Ok(b) = a |> xml.child("b")
-  b |> xml.text |> should.equal("x")
+  a |> shogxml.text |> should.equal("")
+  let assert Ok(b) = a |> shogxml.child("b")
+  b |> shogxml.text |> should.equal("x")
 }
 
 pub fn trim_whitespace_keeps_interior_test() {
-  let root = xml.parse("<a>  one\ntwo  </a>", xml.TrimWhitespace)
+  let root = shogxml.parse("<a>  one\ntwo  </a>", shogxml.TrimWhitespace)
   let assert Ok(a) = root
-  a |> xml.text |> should.equal("one\ntwo")
+  a |> shogxml.text |> should.equal("one\ntwo")
 }
 
 // Namespaces
@@ -148,7 +148,7 @@ pub fn trim_whitespace_keeps_interior_test() {
 pub fn default_namespace_applies_to_elements_test() {
   let root = parse_ok("<multistatus xmlns=\"DAV:\"><response/></multistatus>")
   root.namespace |> should.equal(Some("DAV:"))
-  let assert Ok(response) = root |> xml.child("response")
+  let assert Ok(response) = root |> shogxml.child("response")
   response.namespace |> should.equal(Some("DAV:"))
   response.tag |> should.equal("response")
 }
@@ -161,7 +161,7 @@ pub fn prefixed_namespace_resolves_test() {
   root.prefix |> should.equal(Some("d"))
   root.namespace |> should.equal(Some("DAV:"))
   // Nearest declaration wins over the outer "c" prefix.
-  let assert Ok(data) = root |> xml.child("calendar-data")
+  let assert Ok(data) = root |> shogxml.child("calendar-data")
   data.namespace |> should.equal(Some("urn:real"))
   data.prefix |> should.equal(Some("C"))
 }
@@ -179,13 +179,13 @@ pub fn unprefixed_attribute_has_no_namespace_test() {
 pub fn unprefixed_element_without_default_namespace_test() {
   let root = parse_ok("<a><b/></a>")
   root.namespace |> should.equal(None)
-  let assert Ok(b) = root |> xml.child("b")
+  let assert Ok(b) = root |> shogxml.child("b")
   b.namespace |> should.equal(None)
 }
 
 pub fn shadowed_prefix_on_child_test() {
   let root = parse_ok("<a xmlns:p=\"one\"><p:b xmlns:p=\"two\"/></a>")
-  let assert Ok(b) = root |> xml.child("b")
+  let assert Ok(b) = root |> shogxml.child("b")
   b.namespace |> should.equal(Some("two"))
   b.prefix |> should.equal(Some("p"))
 }

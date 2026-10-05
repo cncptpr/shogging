@@ -1,10 +1,10 @@
 # CalDAV Syncing
 
-This document describes the syncing approaches available in Shogg.
+This document describes the syncing approaches available for CalDAV.
 
 ## CTag-based Sync
 
-Shogg implements Apple's ctag extension for calendar synchronization. This is the recommended approach and is widely supported by CalDAV servers.
+Shogg implements Apple's ctag extension for calendar synchronization. This is simpler and widely supported by CalDAV servers.
 
 ### How it works
 
@@ -74,7 +74,3 @@ Not currently implemented in Shogg. Would require:
 | Server support | Wide                             | Limited              |
 | Efficiency     | Requires full re-fetch on change | Returns only changes |
 | Implementation | Simple                           | Complex              |
-
-## Recommendation
-
-Use the **CTag approach** for now. It works with most CalDAV servers (including Radicale, Nextcloud, Apple Calendar Server, etc.) and is simpler to implement.

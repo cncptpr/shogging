@@ -36,8 +36,6 @@
         let
           inherit (nix-gleam.packages.${system}) buildGleamApplication;
 
-          # The frontend, as a static asset directory: the bundle, the
-          # stylesheet and the icons, which is what `lustre/dev build` writes.
           frontend = buildGleamApplication {
             src = ./client;
             localPackages = [ ./shared ];
@@ -77,12 +75,10 @@
           pkg = buildGleamApplication {
             src = ./server;
 
-            # `shogg` reaches `xml` through a path dependency of its own, so
-            # it has to be staged for the sandbox build too.
             localPackages = [
               ./shogg
               ./shared
-              ./xml
+              ./shogxml
             ];
 
             nativeBuildInputs = [ frontend ];

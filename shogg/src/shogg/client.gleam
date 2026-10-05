@@ -7,8 +7,8 @@ import gleam/list
 import gleam/result
 import gleam/string
 import shogg.{type ShoggError, ParseError, SendError, XmlDecodeError}
-import xml
-import xml/decode
+import shogxml
+import shogxml/decode
 
 pub type Client(io) {
   Client(request: Request(String), io: io)
@@ -131,7 +131,7 @@ pub fn parse_user_info(
   response: Response(String),
 ) -> Result(UserInfo, ShoggError(e)) {
   use root <- result.try(
-    xml.parse(response.body, xml.NoWhitespaceOnly)
+    shogxml.parse(response.body, shogxml.NoWhitespaceOnly)
     |> result.map_error(XmlDecodeError),
   )
   use parsed <- result.try(
@@ -176,7 +176,7 @@ pub fn parse_calendar_home_set(
   response: Response(String),
 ) -> Result(CalendarHomeSet, ShoggError(e)) {
   use root <- result.try(
-    xml.parse(response.body, xml.NoWhitespaceOnly)
+    shogxml.parse(response.body, shogxml.NoWhitespaceOnly)
     |> result.map_error(XmlDecodeError),
   )
   use parsed <- result.try(
