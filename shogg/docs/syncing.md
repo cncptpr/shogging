@@ -20,28 +20,30 @@ Shogg implements Apple's ctag extension for calendar synchronization. This is th
 
 ```gleam
 // Get calendars with ctags
-let assert Ok(calendars) = calendar.fetch_calendars(client, user_info)
+let assert Ok(calendars) = calendar.fetch_calendars(client, home_set)
 
 // Store the calendar and its ctag locally
-let calendar = calendars |> list.first()
+let assert Ok(current) = list.first(calendars)
 
-// Later, check if calendar changed
-let assert Ok(current_ctag) = calendar.get_ctag_request(client, calendar)
-  |> client.io.send
-  |> result.map(calendar.parse_ctag_response)
-let changed = current_ctag != calendar.ctag
-
-// If changed, re-fetch tasks
-if changed {
-  let assert Ok(tasks) = task.fetch_tasks(client, calendar)
-  // Update local store
+// Later, check if the calendar changed: this sends the getctag PROPFIND
+// and compares the answer with the ctag stored on the calendar.
+case calendar.has_changed(client, current) {
+  Ok(calendar.Changed(new_calendar)) -> {
+    // Something changed: re-fetch tasks
+    let assert Ok(tasks) = task.fetch_tasks(client, new_calendar)
+    // Update local store
+  }
+  Ok(calendar.Unchanged) -> Nil
+  Error(_) -> Nil
 }
 ```
 
 ### Functions
 
-- `calendar.get_ctag_request(client, calendar)` - Creates a PROPFIND request to get the current ctag for a calendar
-- `calendar.parse_ctag_response(response)` - Parses the ctag from the server response
+- `calendar.fetch_calendars(client, home_set)` - Lists the calendars with their ctags via a PROPFIND over the calendar home set
+- `calendar.changed_request(client, calendar)` - Creates a PROPFIND request for the current ctag of a calendar
+- `calendar.parse_changed(calendar, response)` - Parses the ctag response and compares it with the stored ctag, giving `Changed(new_calendar)` or `Unchanged`
+- `calendar.has_changed(client, calendar)` - Convenience around the two above: sends the request and parses the response; this is what the server's change polling uses
 
 ---
 

@@ -66,6 +66,12 @@
       cwd = "${config.devenv.root}/shared";
       exec = "gleam test";
     };
+
+    "xml:test" = {
+      description = "Run the tests for the pure Gleam xml package";
+      cwd = "${config.devenv.root}/xml";
+      exec = "gleam test";
+    };
   };
 
   processes.radicale = {

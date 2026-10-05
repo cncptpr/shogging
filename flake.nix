@@ -77,9 +77,12 @@
           pkg = buildGleamApplication {
             src = ./server;
 
+            # `shogg` reaches `xml` through a path dependency of its own, so
+            # it has to be staged for the sandbox build too.
             localPackages = [
               ./shogg
               ./shared
+              ./xml
             ];
 
             nativeBuildInputs = [ frontend ];
