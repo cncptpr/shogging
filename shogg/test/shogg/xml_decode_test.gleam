@@ -1,3 +1,4 @@
+import gleam/option.{Some}
 import gleam/string
 import gleeunit
 import gleeunit/should
@@ -39,7 +40,7 @@ pub fn resolves_namespaces_from_fixture_test() {
 
   // The default xmlns applies to unprefixed elements...
   root.tag |> should.equal("multistatus")
-  root.namespace |> should.equal("DAV:")
+  root.namespace |> should.equal(Some("DAV:"))
 
   // ...and the C prefix declared on the root resolves on descendants.
   let assert Ok(response) = xml.child(root, "response")
@@ -47,8 +48,8 @@ pub fn resolves_namespaces_from_fixture_test() {
   let assert Ok(prop) = xml.child(propstat, "prop")
   let assert Ok(data) = xml.child(prop, "calendar-data")
   data.tag |> should.equal("calendar-data")
-  data.prefix |> should.equal("C")
-  data.namespace |> should.equal("urn:ietf:params:xml:ns:caldav")
+  data.prefix |> should.equal(Some("C"))
+  data.namespace |> should.equal(Some("urn:ietf:params:xml:ns:caldav"))
 }
 
 pub fn keeps_ical_newlines_in_calendar_data_test() {

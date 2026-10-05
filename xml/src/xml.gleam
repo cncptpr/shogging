@@ -33,24 +33,24 @@ import gleam/string
 
 /// A child of an element.
 ///
-/// `El` wraps a nested element, `Text` carries character data (already
+/// `Elem` wraps a nested element, `Text` carries character data (already
 /// entity-unescaped and processed according to the whitespace mode), and
 /// `Comment` keeps comment content for inspection. The navigation helpers and
 /// decoders only look at element children unless stated otherwise.
 pub type Node {
   Text(String)
   Comment(String)
-  El(Element)
+  Elem(Element)
 }
 
 /// A parsed XML element.
 pub type Element {
   Element(
-    // The prefix exactly as written, "" when there is none.
-    prefix: String,
+    // The prefix exactly as written, None when the name has none.
+    prefix: Option(String),
     // The namespace URI the prefix (or the default namespace) resolves to,
-    // "" when the name is in no namespace.
-    namespace: String,
+    // None when the name is in no namespace.
+    namespace: Option(String),
     // The local name of the tag, without any prefix.
     tag: String,
     attributes: List(Attribute),
@@ -63,8 +63,8 @@ pub type Element {
 /// when a default `xmlns` is in effect.
 pub type Attribute {
   Attribute(
-    prefix: String,
-    namespace: String,
+    prefix: Option(String),
+    namespace: Option(String),
     name: String,
     value: String,
   )
@@ -105,7 +105,7 @@ pub fn parse(input: String, whitespace: Whitespace) -> Result(Element, Error) {
 pub fn children(element: Element) -> List(Element) {
   list.filter_map(element.children, fn(node) {
     case node {
-      El(child) -> Ok(child)
+      Elem(child) -> Ok(child)
       Text(_) | Comment(_) -> Error(Nil)
     }
   })
@@ -170,10 +170,10 @@ fn find_attribute_in(
 type Frame {
   Frame(
     qualified: String,
-    prefix: String,
-    namespace: String,
+    prefix: Option(String),
+    namespace: Option(String),
     tag: String,
-    scope: List(#(String, String)),
+    scope: List(#(String, Option(String))),
     attributes: List(Attribute),
     children: List(Node),
   )
@@ -562,14 +562,14 @@ fn take_quoted(
 
 // Tree construction
 
-fn root_scope() -> List(#(String, String)) {
-  [#("xml", "http://www.w3.org/XML/1998/namespace")]
+fn root_scope() -> List(#(String, Option(String))) {
+  [#("xml", Some("http://www.w3.org/XML/1998/namespace"))]
 }
 
 fn build_frame(
   qualified: String,
   raw_attrs: List(#(String, String)),
-  parent_scope: List(#(String, String)),
+  parent_scope: List(#(String, Option(String))),
 ) -> Frame {
   // Namespace declarations apply to the whole element regardless of where
   // they appear among the attributes, so they are collected first and layered
@@ -592,7 +592,7 @@ fn build_frame(
   Frame(
     qualified: qualified,
     prefix: prefix,
-    namespace: resolve(scope, prefix),
+    namespace: resolve_element_namespace(scope, prefix),
     tag: local,
     scope: scope,
     attributes: attributes,
@@ -624,7 +624,7 @@ fn attach(
     [parent, ..rest] ->
       Ok(#(
         [
-          Frame(..parent, children: [El(element), ..parent.children]),
+          Frame(..parent, children: [Elem(element), ..parent.children]),
           ..rest
         ],
         root,
@@ -632,38 +632,63 @@ fn attach(
   }
 }
 
-fn split_qname(name: String) -> #(String, String) {
+fn split_qname(name: String) -> #(Option(String), String) {
   case string.split_once(name, ":") {
-    Ok(#(prefix, local)) -> #(prefix, local)
-    Error(Nil) -> #("", name)
+    Ok(#(prefix, local)) -> #(Some(prefix), local)
+    Error(Nil) -> #(None, name)
   }
 }
 
-fn xmlns_declaration(raw: #(String, String)) -> Result(#(String, String), Nil) {
+fn xmlns_declaration(
+  raw: #(String, String),
+) -> Result(#(String, Option(String)), Nil) {
   let #(name, value) = raw
+  // An empty namespace name undeclares the prefix (or the default one).
+  let uri = case value {
+    "" -> None
+    _ -> Some(value)
+  }
   case name {
-    "xmlns" -> Ok(#("", value))
+    "xmlns" -> Ok(#("", uri))
     _ ->
       case string.split_once(name, ":") {
-        Ok(#("xmlns", prefix)) -> Ok(#(prefix, value))
+        Ok(#("xmlns", prefix)) -> Ok(#(prefix, uri))
         _ -> Error(Nil)
       }
   }
 }
 
-fn resolve(scope: List(#(String, String)), prefix: String) -> String {
+fn resolve(
+  scope: List(#(String, Option(String))),
+  prefix: String,
+) -> Option(String) {
   case list.key_find(scope, prefix) {
     Ok(uri) -> uri
-    Error(Nil) -> ""
+    Error(Nil) -> None
+  }
+}
+
+// An unprefixed element takes the default namespace, "" being the key the
+// `xmlns` declaration binds.
+fn resolve_element_namespace(
+  scope: List(#(String, Option(String))),
+  prefix: Option(String),
+) -> Option(String) {
+  case prefix {
+    None -> resolve(scope, "")
+    Some(prefix) -> resolve(scope, prefix)
   }
 }
 
 // Attributes without a prefix are in no namespace even when a default
 // namespace is in effect, per the namespaces spec.
-fn attribute_namespace(scope: List(#(String, String)), prefix: String) -> String {
+fn attribute_namespace(
+  scope: List(#(String, Option(String))),
+  prefix: Option(String),
+) -> Option(String) {
   case prefix {
-    "" -> ""
-    _ -> resolve(scope, prefix)
+    None -> None
+    Some(prefix) -> resolve(scope, prefix)
   }
 }
 

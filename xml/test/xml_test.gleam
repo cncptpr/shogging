@@ -147,9 +147,9 @@ pub fn trim_whitespace_keeps_interior_test() {
 
 pub fn default_namespace_applies_to_elements_test() {
   let root = parse_ok("<multistatus xmlns=\"DAV:\"><response/></multistatus>")
-  root.namespace |> should.equal("DAV:")
+  root.namespace |> should.equal(Some("DAV:"))
   let assert Ok(response) = root |> xml.child("response")
-  response.namespace |> should.equal("DAV:")
+  response.namespace |> should.equal(Some("DAV:"))
   response.tag |> should.equal("response")
 }
 
@@ -158,36 +158,36 @@ pub fn prefixed_namespace_resolves_test() {
     parse_ok("<d:multistatus xmlns:d=\"DAV:\" xmlns:c=\"urn:caldav\">"
       <> "<C:calendar-data xmlns:C=\"urn:real\"/>"
       <> "</d:multistatus>")
-  root.prefix |> should.equal("d")
-  root.namespace |> should.equal("DAV:")
+  root.prefix |> should.equal(Some("d"))
+  root.namespace |> should.equal(Some("DAV:"))
   // Nearest declaration wins over the outer "c" prefix.
   let assert Ok(data) = root |> xml.child("calendar-data")
-  data.namespace |> should.equal("urn:real")
-  data.prefix |> should.equal("C")
+  data.namespace |> should.equal(Some("urn:real"))
+  data.prefix |> should.equal(Some("C"))
 }
 
 pub fn unprefixed_attribute_has_no_namespace_test() {
   let root = parse_ok("<a xmlns=\"DAV:\" lang=\"en\"/>")
-  root.namespace |> should.equal("DAV:")
+  root.namespace |> should.equal(Some("DAV:"))
   // The xmlns declaration itself stays visible as an attribute.
   let assert [xmlns, lang] = root.attributes
   xmlns.name |> should.equal("xmlns")
-  lang.namespace |> should.equal("")
+  lang.namespace |> should.equal(None)
   lang.name |> should.equal("lang")
 }
 
 pub fn unprefixed_element_without_default_namespace_test() {
   let root = parse_ok("<a><b/></a>")
-  root.namespace |> should.equal("")
+  root.namespace |> should.equal(None)
   let assert Ok(b) = root |> xml.child("b")
-  b.namespace |> should.equal("")
+  b.namespace |> should.equal(None)
 }
 
 pub fn shadowed_prefix_on_child_test() {
   let root = parse_ok("<a xmlns:p=\"one\"><p:b xmlns:p=\"two\"/></a>")
   let assert Ok(b) = root |> xml.child("b")
-  b.namespace |> should.equal("two")
-  b.prefix |> should.equal("p")
+  b.namespace |> should.equal(Some("two"))
+  b.prefix |> should.equal(Some("p"))
 }
 
 // Decoders

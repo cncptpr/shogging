@@ -21,7 +21,7 @@
 //// let assert Ok(items) = decode.run(root, items_decoder())
 //// ```
 ////
-//// `field` matches any namespace; use `field_ns`/`at_ns` when the namespace
+//// `field` matches any namespace; use `field_ns` when the namespace
 //// URI matters. Errors carry the stdlib `DecodeError` type with a path of
 //// tag names, so they read like the dynamic decoders'.
 
@@ -384,7 +384,7 @@ fn child_ns(
   name: String,
 ) -> Result(Element, Nil) {
   xml.children_named(element, name)
-  |> list.find(fn(child) { child.namespace == namespace })
+  |> list.find(fn(child) { child.namespace == Some(namespace) })
 }
 
 fn decode_each(
@@ -415,5 +415,5 @@ fn push_path(errors: List(DecodeError), path: List(String)) -> List(DecodeError)
 }
 
 fn empty_element() -> Element {
-  Element(prefix: "", namespace: "", tag: "", attributes: [], children: [])
+  Element(prefix: None, namespace: None, tag: "", attributes: [], children: [])
 }
