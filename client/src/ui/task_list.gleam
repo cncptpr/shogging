@@ -50,15 +50,7 @@ fn header(connection: Connection, motto: String) -> Element(Msg) {
           attribute.type_("button"),
           event.on_click(UserClickedAdd),
         ],
-        [html.text("+ add")],
-      ),
-      html.button(
-        [
-          class("btn"),
-          attribute.type_("button"),
-          event.on_click(UserClickedReload),
-        ],
-        [html.text("reload")],
+        [html.text("+")],
       ),
     ]),
   ])
